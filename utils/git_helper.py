@@ -53,8 +53,6 @@ class GitHelper:
         Проверяет как изменённые, так и новые (неотслеживаемые) файлы.
         """
         try:
-            # git status --porcelain выдаёт список изменённых файлов в машиночитаемом формате
-            # Если вывод пустой — изменений нет. Если есть строки — изменения есть.
             result = subprocess.run(
                 ['git', 'status', '--porcelain'],
                 cwd=path,
@@ -63,25 +61,25 @@ class GitHelper:
                 encoding='utf-8',
                 errors='replace'
             )
-            
-            # strip() убирает лишние переносы строк в начале и конце
-            # bool() преобразует строку: пустая = False, не пустая = True
             return bool(result.stdout.strip())
-            
         except Exception as e:
-            # В случае ошибки считаем, что изменения есть (чтобы не пропустить коммит)
-            # Или можно вернуть False, в зависимости от желаемой логики
             print(f"[WARNING] Error checking git status: {e}")
             return True
 
     @staticmethod
-    def push(path, remote='origin', branch='main', token=None, callback=None):
+    def push(path, remote='origin', branch='main', token=None, callback=None, force=False):
+        # Формируем команду push
+        cmd = ['push']
+        if force:
+            cmd.append('--force')
+        cmd.extend(['-u', remote, branch])
+        
         if token:
             return GitHelper.run_cmd(
-                ['push', '-u', remote, branch], path, callback,
+                cmd, path, callback,
                 extra_env={'GIT_ASKPASS': 'echo', 'GIT_USERNAME': token, 'GIT_PASSWORD': 'x-oauth-basic'}
             )
-        return GitHelper.run_cmd(['push', '-u', remote, branch], path, callback)
+        return GitHelper.run_cmd(cmd, path, callback)
 
     @staticmethod
     def get_branches(path):
