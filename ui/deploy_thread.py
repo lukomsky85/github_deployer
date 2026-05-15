@@ -12,7 +12,7 @@ class DeployThread(QThread):
     log_signal = pyqtSignal(str, str)
     finished_signal = pyqtSignal(bool, str)
     
-    def __init__(self, path, repo, token, message, do_gitignore, branch, create_branch):
+    def __init__(self, path, repo, token, message, do_gitignore, branch, create_branch, do_pull=False):
         super().__init__()
         self.path = path
         self.repo = repo
@@ -21,6 +21,7 @@ class DeployThread(QThread):
         self.do_gitignore = do_gitignore
         self.branch = branch
         self.create_branch = create_branch
+        self.do_pull = do_pull  # 🔁 Новая опция: выполнять pull перед пушем
     
     def log(self, msg, level='info'):
         self.log_signal.emit(msg, level)
@@ -29,11 +30,13 @@ class DeployThread(QThread):
         try:
             self.log(f"🎯 Start: {self.path}")
             
+            # ── Инициализация репозитория ─────────────────────────────
             if not GitHelper.is_git_repo(self.path):
                 self.log("🔄 Init repo...")
                 GitHelper.run_cmd(['init'], self.path, self.log)
                 GitHelper.run_cmd(['branch', '-M', 'main'], self.path, self.log)
 
+            # ── Создание .gitignore ───────────────────────────────────
             if self.do_gitignore:
                 gi_path = os.path.join(self.path, '.gitignore')
                 if not os.path.exists(gi_path):
@@ -41,9 +44,11 @@ class DeployThread(QThread):
                         f.write(DEFAULT_GITIGNORE)
                     self.log("✅ Created .gitignore", 'success')
 
+            # ── Настройка remote origin ───────────────────────────────
             GitHelper.run_cmd(['remote', 'remove', 'origin'], self.path, self.log)
             GitHelper.run_cmd(['remote', 'add', 'origin', self.repo], self.path, self.log)
 
+            # ── Переключение/создание ветки ───────────────────────────
             current = GitHelper.get_current_branch(self.path)
             if self.create_branch:
                 self.log(f"🌿 Create: {self.branch}")
@@ -54,13 +59,23 @@ class DeployThread(QThread):
                 if not ok:
                     GitHelper.run_cmd(['checkout', '-b', self.branch], self.path, self.log)
 
+            # ── Fetch (получение информации с сервера) ─────────────────
             self.log("📥 Fetching...")
             GitHelper.run_cmd(['fetch', 'origin'], self.path, self.log)
             
+            # ── Pull (синхронизация с сервером) — ОПЦИОНАЛЬНО ─────────
+            if self.do_pull:
+                self.log("🔄 Sync with remote (pull --rebase)...")
+                # Используем --rebase для линейной истории
+                ok, err = GitHelper.run_cmd(['pull', '--rebase', 'origin', self.branch], self.path, self.log)
+                if not ok:
+                    self.log("⚠️ Не удалось автоматически синхронизироваться. Продолжаем с локальными изменениями.", 'warning')
+            
+            # ── Staging (добавление файлов) ───────────────────────────
             self.log("📦 Staging (git add -A)...")
             GitHelper.run_cmd(['add', '-A'], self.path, self.log)
 
-            # ✅ Коммитим только если есть изменения
+            # ── Commit (только если есть изменения) ───────────────────
             if GitHelper.has_changes(self.path):
                 msg = self.message if self.message else f"🔄 Update {datetime.now().strftime('%H:%M')}"
                 self.log(f"💾 Commit: '{msg}'")
@@ -76,7 +91,7 @@ class DeployThread(QThread):
             else:
                 self.log("✨ Локальные изменения отсутствуют (коммит пропущен)", 'info')
 
-            # 🔐 ПРОВЕРКА НА СЕКРЕТЫ ПЕРЕД ПУШЕМ
+            # ── 🔐 ПРОВЕРКА НА СЕКРЕТЫ ПЕРЕД ПУШЕМ ────────────────────
             self.log("🔍 Сканирование на секреты...")
             secrets = GitHelper.scan_for_secrets(self.path, callback=self.log)
             
@@ -92,16 +107,17 @@ class DeployThread(QThread):
             
             self.log("✨ Секреты не обнаружены — продолжаем", 'success')
 
-            # 🚀 ПУШ ВЫПОЛНЯЕТСЯ ВСЕГДА (даже если нет новых коммитов)
+            # ── 🚀 PUSH (всегда выполняется) ─────────────────────────
             self.log(f"🚀 Pushing to {self.branch}...")
             success, err = GitHelper.push(
                 self.path, 
                 branch=self.branch, 
                 token=self.token, 
                 callback=self.log,
-                force=True
+                force=True  # Принудительная отправка
             )
             
+            # ── Обработка результата ──────────────────────────────────
             if success:
                 branch_upper = self.branch.upper()
                 self.log(lang_mgr.get_text("messages.deploy_success", branch=branch_upper), 'success')
