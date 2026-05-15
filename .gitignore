@@ -1,0 +1,23 @@
+# Secrets
+instance/.secret_key
+*.db
+.env
+secure_token.dat
+commit_history.json
+
+# Temp
+__pycache__/
+*.py[cod]
+venv/
+logs/
+
+# DB
+*.sqlite
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
