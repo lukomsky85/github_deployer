@@ -27,20 +27,35 @@ class GitHelper:
                 ['git'] + args,
                 cwd=path,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
+                stderr=subprocess.PIPE,  # ← разделяем stderr
                 text=True,
                 env=env,
                 encoding='utf-8',
                 errors='replace'
             )
             
+            output_lines = []
+            # Читаем stdout
             for line in process.stdout:
                 clean = re.sub(r'\x1B\[[0-?]*[ -/]*[@-~]', '', line).strip()
                 if clean and callback: 
                     callback(clean)
+                output_lines.append(clean)
+            
+            # Читаем stderr
+            stderr = process.stderr.read()
+            if stderr and callback:
+                callback(f"ERROR: {stderr.strip()}")
             
             process.wait()
-            return process.returncode == 0, ""
+            
+            if process.returncode != 0:
+                error_msg = stderr.strip() or "Unknown git error"
+                if callback:
+                    callback(f"❌ Git command failed: {error_msg}")
+                return False, error_msg
+                
+            return True, ""
         except Exception as e:
             if callback: 
                 callback(f"Error: {str(e)}")
