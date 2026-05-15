@@ -65,16 +65,15 @@ class DeployThread(QThread):
                 if not ok:
                     GitHelper.run_cmd(['checkout', '-b', self.branch], self.path, self.log)
 
-            # ── Fetch + проверка пустого репозитория ──────────────────
+            # ── Fetch + Pull (опционально) ────────────────────────────
             self.log("📥 Fetching...")
             GitHelper.run_cmd(['fetch', 'origin'], self.path, self.log)
             
-            # 🔁 Pull перед пушем (если включено пользователем)
-            if self.do_pull and not GitHelper.is_remote_empty(self.path, branch=self.branch):
+            if self.do_pull:
                 self.log("🔄 Sync with remote (pull --rebase)...")
                 ok, err = GitHelper.run_cmd(['pull', '--rebase', 'origin', self.branch], self.path, self.log)
                 if not ok:
-                    self.log("⚠️ Не удалось автоматически синхронизироваться. Продолжаем с локальными изменениями.", 'warning')
+                    self.log("⚠️ Не удалось синхронизироваться. Продолжаем.", 'warning')
             
             # ── Staging ───────────────────────────────────────────────
             self.log("📦 Staging (git add -A)...")
@@ -96,7 +95,7 @@ class DeployThread(QThread):
             else:
                 self.log("✨ Локальные изменения отсутствуют (коммит пропущен)", 'info')
 
-            # ── 🔐 ПРОВЕРКА НА СЕКРЕТЫ ПЕРЕД ПУШЕМ ────────────────────
+            # ── 🔐 ПРОВЕРКА НА СЕКРЕТЫ ────────────────────────────────
             self.log("🔍 Сканирование на секреты...")
             secrets = GitHelper.scan_for_secrets(self.path, callback=self.log)
             
@@ -110,19 +109,14 @@ class DeployThread(QThread):
             
             self.log("✨ Секреты не обнаружены — продолжаем", 'success')
 
-            # ── 🚀 PUSH (с авто-определением первого пуша) ────────────
+            # ── 🚀 PUSH (ВСЕГДА С --force) ───────────────────────────
             self.log(f"🚀 Pushing to {self.branch}...")
-            
-            # Определяем, нужен ли --force (пустой remote или явная настройка)
-            is_first_push = GitHelper.is_remote_empty(self.path, branch=self.branch)
-            force_push = is_first_push  # Первый пуш всегда с --force
-            
             success, err = GitHelper.push(
                 self.path, 
                 branch=self.branch, 
                 token=self.token, 
                 callback=self.log,
-                force=force_push
+                force=True  # ← ВСЕГДА перезаписываем историю
             )
             
             # ── Обработка результата ──────────────────────────────────
@@ -132,7 +126,6 @@ class DeployThread(QThread):
                 self.finished_signal.emit(True, lang_mgr.get_text("messages.deploy_success_message", branch=self.branch))
             else:
                 if "rejected" in err.lower():
-                    # Если отклонено из-за секретов в истории — даём понятный совет
                     if "GH013" in err or "secret" in err.lower():
                         self.log("🔑 GitHub заблокировал пуш из-за секрета в истории", 'error')
                         self.log("💡 Решение: перейдите по ссылке из ошибки и нажмите 'Allow secret'", 'warning')
