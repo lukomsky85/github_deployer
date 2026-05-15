@@ -27,7 +27,7 @@ class GitHelper:
                 ['git'] + args,
                 cwd=path,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,  # ← разделяем stderr
+                stderr=subprocess.PIPE,
                 text=True,
                 env=env,
                 encoding='utf-8',
@@ -35,14 +35,12 @@ class GitHelper:
             )
             
             output_lines = []
-            # Читаем stdout
             for line in process.stdout:
                 clean = re.sub(r'\x1B\[[0-?]*[ -/]*[@-~]', '', line).strip()
                 if clean and callback: 
                     callback(clean)
                 output_lines.append(clean)
             
-            # Читаем stderr
             stderr = process.stderr.read()
             if stderr and callback:
                 callback(f"ERROR: {stderr.strip()}")
@@ -80,6 +78,79 @@ class GitHelper:
         except Exception as e:
             print(f"[WARNING] Error checking git status: {e}")
             return True
+
+    @staticmethod
+    def scan_for_secrets(path, callback=None):
+        """
+        Сканирует отслеживаемые файлы на наличие потенциальных секретов.
+        Возвращает список найденных проблем: [(файл, строка, тип_секрета), ...]
+        """
+        # Паттерны для распространённых секретов
+        SECRET_PATTERNS = {
+            'GitHub PAT (Classic)': r'ghp_[A-Za-z0-9]{36,}',
+            'GitHub PAT (Fine-grained)': r'github_pat_[A-Za-z0-9]{22,}_[A-Za-z0-9]{59}',
+            'GitHub OAuth': r'gho_[A-Za-z0-9]{36,}',
+            'GitHub App Token': r'ghs_[A-Za-z0-9]{36,}',
+            'Generic API Key': r'(?i)(api[_-]?key|apikey)\s*[:=]\s*["\']?[A-Za-z0-9_\-]{20,}',
+            'Password in URL': r'https?://[^:]+:[^@]+@',
+            'AWS Access Key': r'AKIA[0-9A-Z]{16}',
+        }
+        
+        # Файлы, которые ВСЕГДА игнорируем (даже если в индексе)
+        AUTO_EXCLUDE = {
+            'repositories.json',
+            'secure_token.dat', 
+            '*.env',
+            'config_local.py',
+            'secrets.json',
+            '.env.local',
+            '*.key',
+            '*.pem'
+        }
+        
+        findings = []
+        
+        try:
+            # Получаем список отслеживаемых файлов
+            res = subprocess.run(
+                ['git', 'ls-files', '--cached'],
+                cwd=path,
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='replace'
+            )
+            
+            for file_path in res.stdout.strip().splitlines():
+                if not file_path:
+                    continue
+                    
+                # Пропускаем файлы из авто-исключения
+                if any(file_path == exc or file_path.endswith(exc.replace('*', '')) for exc in AUTO_EXCLUDE):
+                    if callback:
+                        callback(f"🔒 Исключён из проверки: {file_path}")
+                    continue
+                
+                full_path = os.path.join(path, file_path)
+                if not os.path.isfile(full_path):
+                    continue
+                    
+                try:
+                    with open(full_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        for line_num, line in enumerate(f, 1):
+                            for secret_name, pattern in SECRET_PATTERNS.items():
+                                if re.search(pattern, line):
+                                    findings.append((file_path, line_num, secret_name))
+                                    if callback:
+                                        callback(f"⚠️ Секрет '{secret_name}' в {file_path}:{line_num}")
+                except Exception:
+                    pass  # Пропускаем файлы, которые не удалось прочитать
+                    
+        except Exception as e:
+            if callback:
+                callback(f"[WARNING] Secret scan error: {e}")
+                
+        return findings
 
     @staticmethod
     def push(path, remote='origin', branch='main', token=None, callback=None, force=False):

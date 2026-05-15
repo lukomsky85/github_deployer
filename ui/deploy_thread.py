@@ -60,7 +60,7 @@ class DeployThread(QThread):
             self.log("📦 Staging (git add -A)...")
             GitHelper.run_cmd(['add', '-A'], self.path, self.log)
 
-            # ✅ ИСПРАВЛЕНИЕ: Коммитим только если есть изменения, но НЕ выходим из метода
+            # ✅ Коммитим только если есть изменения
             if GitHelper.has_changes(self.path):
                 msg = self.message if self.message else f"🔄 Update {datetime.now().strftime('%H:%M')}"
                 self.log(f"💾 Commit: '{msg}'")
@@ -75,6 +75,22 @@ class DeployThread(QThread):
                     CommitHistoryManager.save_message(self.message)
             else:
                 self.log("✨ Локальные изменения отсутствуют (коммит пропущен)", 'info')
+
+            # 🔐 ПРОВЕРКА НА СЕКРЕТЫ ПЕРЕД ПУШЕМ
+            self.log("🔍 Сканирование на секреты...")
+            secrets = GitHelper.scan_for_secrets(self.path, callback=self.log)
+            
+            if secrets:
+                self.log(f"❌ Обнаружено {len(secrets)} потенциальных секретов!", 'error')
+                self.log("💡 Совет: добавьте файлы с токенами в .gitignore", 'warning')
+                
+                # Формируем понятное сообщение об ошибке
+                secret_files = list(set(f for f, _, _ in secrets))
+                error_msg = f"Secrets detected: {', '.join(secret_files)}"
+                self.finished_signal.emit(False, error_msg)
+                return  # ⛔ Останавливаем пуш!
+            
+            self.log("✨ Секреты не обнаружены — продолжаем", 'success')
 
             # 🚀 ПУШ ВЫПОЛНЯЕТСЯ ВСЕГДА (даже если нет новых коммитов)
             self.log(f"🚀 Pushing to {self.branch}...")
