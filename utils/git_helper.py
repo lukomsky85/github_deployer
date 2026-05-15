@@ -153,6 +153,63 @@ class GitHelper:
         return findings
 
     @staticmethod
+    def auto_fix_ignored_files(path, callback=None):
+        """
+        Автоматически удаляет из индекса файлы, которые есть в .gitignore,
+        но всё ещё отслеживаются Git.
+        """
+        try:
+            # Получаем список файлов, которые игнорируются, но отслеживаются
+            res = subprocess.run(
+                ['git', 'ls-files', '--ignored', '--exclude-standard'],
+                cwd=path,
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='replace'
+            )
+            
+            fixed = []
+            for file_path in res.stdout.strip().splitlines():
+                if file_path:
+                    # Удаляем из индекса, но оставляем на диске
+                    subprocess.run(
+                        ['git', 'rm', '--cached', file_path],
+                        cwd=path,
+                        capture_output=True,
+                        text=True
+                    )
+                    fixed.append(file_path)
+                    if callback:
+                        callback(f"🔒 Auto-fix: удалён из индекса: {file_path}")
+            
+            return fixed
+        except Exception as e:
+            if callback:
+                callback(f"[WARNING] Auto-fix error: {e}")
+            return []
+
+    @staticmethod
+    def is_remote_empty(path, remote='origin', branch='main', callback=None):
+        """
+        Проверяет, пуст ли удалённый репозиторий (нет коммитов в ветке).
+        Возвращает True, если ветка не существует на сервере.
+        """
+        try:
+            res = subprocess.run(
+                ['git', 'ls-remote', '--heads', remote, branch],
+                cwd=path,
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='replace'
+            )
+            # Если вывод пустой — ветка не существует на сервере (пустой репо)
+            return not res.stdout.strip()
+        except Exception:
+            return False  # При ошибке считаем, что не пустой (безопаснее)
+
+    @staticmethod
     def push(path, remote='origin', branch='main', token=None, callback=None, force=False):
         # Формируем команду push
         cmd = ['push']

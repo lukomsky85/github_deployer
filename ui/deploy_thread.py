@@ -21,7 +21,7 @@ class DeployThread(QThread):
         self.do_gitignore = do_gitignore
         self.branch = branch
         self.create_branch = create_branch
-        self.do_pull = do_pull  # 🔁 Новая опция: выполнять pull перед пушем
+        self.do_pull = do_pull
     
     def log(self, msg, level='info'):
         self.log_signal.emit(msg, level)
@@ -44,6 +44,12 @@ class DeployThread(QThread):
                         f.write(DEFAULT_GITIGNORE)
                     self.log("✅ Created .gitignore", 'success')
 
+            # ── 🔧 AUTO-FIX: Удаляем из индекса файлы из .gitignore ───
+            self.log("🔍 Проверка индекса...")
+            fixed_files = GitHelper.auto_fix_ignored_files(self.path, callback=self.log)
+            if fixed_files:
+                self.log(f"✨ Исправлено {len(fixed_files)} файлов в индексе", 'success')
+
             # ── Настройка remote origin ───────────────────────────────
             GitHelper.run_cmd(['remote', 'remove', 'origin'], self.path, self.log)
             GitHelper.run_cmd(['remote', 'add', 'origin', self.repo], self.path, self.log)
@@ -59,19 +65,18 @@ class DeployThread(QThread):
                 if not ok:
                     GitHelper.run_cmd(['checkout', '-b', self.branch], self.path, self.log)
 
-            # ── Fetch (получение информации с сервера) ─────────────────
+            # ── Fetch + проверка пустого репозитория ──────────────────
             self.log("📥 Fetching...")
             GitHelper.run_cmd(['fetch', 'origin'], self.path, self.log)
             
-            # ── Pull (синхронизация с сервером) — ОПЦИОНАЛЬНО ─────────
-            if self.do_pull:
+            # 🔁 Pull перед пушем (если включено пользователем)
+            if self.do_pull and not GitHelper.is_remote_empty(self.path, branch=self.branch):
                 self.log("🔄 Sync with remote (pull --rebase)...")
-                # Используем --rebase для линейной истории
                 ok, err = GitHelper.run_cmd(['pull', '--rebase', 'origin', self.branch], self.path, self.log)
                 if not ok:
                     self.log("⚠️ Не удалось автоматически синхронизироваться. Продолжаем с локальными изменениями.", 'warning')
             
-            # ── Staging (добавление файлов) ───────────────────────────
+            # ── Staging ───────────────────────────────────────────────
             self.log("📦 Staging (git add -A)...")
             GitHelper.run_cmd(['add', '-A'], self.path, self.log)
 
@@ -98,23 +103,26 @@ class DeployThread(QThread):
             if secrets:
                 self.log(f"❌ Обнаружено {len(secrets)} потенциальных секретов!", 'error')
                 self.log("💡 Совет: добавьте файлы с токенами в .gitignore", 'warning')
-                
-                # Формируем понятное сообщение об ошибке
                 secret_files = list(set(f for f, _, _ in secrets))
                 error_msg = f"Secrets detected: {', '.join(secret_files)}"
                 self.finished_signal.emit(False, error_msg)
-                return  # ⛔ Останавливаем пуш!
+                return
             
             self.log("✨ Секреты не обнаружены — продолжаем", 'success')
 
-            # ── 🚀 PUSH (всегда выполняется) ─────────────────────────
+            # ── 🚀 PUSH (с авто-определением первого пуша) ────────────
             self.log(f"🚀 Pushing to {self.branch}...")
+            
+            # Определяем, нужен ли --force (пустой remote или явная настройка)
+            is_first_push = GitHelper.is_remote_empty(self.path, branch=self.branch)
+            force_push = is_first_push  # Первый пуш всегда с --force
+            
             success, err = GitHelper.push(
                 self.path, 
                 branch=self.branch, 
                 token=self.token, 
                 callback=self.log,
-                force=True  # Принудительная отправка
+                force=force_push
             )
             
             # ── Обработка результата ──────────────────────────────────
@@ -124,6 +132,10 @@ class DeployThread(QThread):
                 self.finished_signal.emit(True, lang_mgr.get_text("messages.deploy_success_message", branch=self.branch))
             else:
                 if "rejected" in err.lower():
+                    # Если отклонено из-за секретов в истории — даём понятный совет
+                    if "GH013" in err or "secret" in err.lower():
+                        self.log("🔑 GitHub заблокировал пуш из-за секрета в истории", 'error')
+                        self.log("💡 Решение: перейдите по ссылке из ошибки и нажмите 'Allow secret'", 'warning')
                     self.log(lang_mgr.get_text("messages.push_rejected"), 'error')
                     self.finished_signal.emit(False, "Rejected")
                 elif "auth" in err.lower() or "403" in err:
