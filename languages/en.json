@@ -23,8 +23,8 @@
         "deploy": "Deploy",
         "refresh_branches": "Refresh Branches",
         "clear_log": "Clear Log",
-        "token_set": "🟢 Token Set",
-        "token_not_set": "🔴 No Token",
+        "token_set": "Token set",
+        "token_not_set": "Token not set",
         "token_tooltip": "GitHub token is set",
         "no_token_tooltip": "GitHub token not set"
     },

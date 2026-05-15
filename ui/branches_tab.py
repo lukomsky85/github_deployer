@@ -7,11 +7,12 @@ from PyQt5.QtWidgets import (
     QSizePolicy
 )
 from PyQt5.QtGui import QColor
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QSize
 
 from utils.git_helper import GitHelper
 from utils.lang_manager import lang_mgr
 from ui.dialogs import BranchDialog
+from utils.icon_manager import IconManager
 
 
 class BranchesTabMixin:
@@ -43,6 +44,7 @@ class BranchesTabMixin:
             "QPushButton { background-color: #e8f0fe; color: #1e66f5; border-color: #b8d0fb; }"
             "QPushButton:hover { background-color: #d0e4fd; }"
         )
+        IconManager().set_button_icon(load_btn, 'refresh', color='#1e66f5', size=QSize(16, 16))
         load_btn.clicked.connect(self._load_branches_info)
         project_layout.addWidget(load_btn)
 
@@ -93,6 +95,7 @@ class BranchesTabMixin:
         delete_btn.setStyleSheet(
             "QPushButton { color: #d20f39; } QPushButton:hover { border-color: #d20f39; color: #d20f39; }"
         )
+        IconManager().set_danger_button_icon(delete_btn, 'delete', size=QSize(16, 16))
         delete_btn.clicked.connect(self._delete_selected_branch)
         actions_layout.addWidget(delete_btn)
         actions_layout.addStretch()

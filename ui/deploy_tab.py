@@ -69,7 +69,7 @@ class DeployTabMixin:
         btn_del.setFixedWidth(90)
         btn_del.setToolTip(lang_mgr.get_text("deploy_tab.delete_profile_tooltip"))
         btn_del.setStyleSheet("QPushButton { color: #d20f39; } QPushButton:hover { color: #d20f39; border-color: #d20f39; }")
-        self.icons.set_button_icon(btn_del, 'delete', size=QSize(16, 16))
+        self.icons.set_danger_button_icon(btn_del, 'delete', size=QSize(16, 16))
         btn_del.clicked.connect(self._delete_repo)
         pg_layout.addWidget(btn_del)
 
@@ -80,7 +80,7 @@ class DeployTabMixin:
             "QPushButton { background-color: #e8f0fe; color: #1e66f5; border-color: #b8d0fb; }"
             "QPushButton:hover { background-color: #d0e4fd; }"
         )
-        self.icons.set_button_icon(self.btn_save_profile, 'save', size=QSize(16, 16))
+        self.icons.set_primary_button_icon(self.btn_save_profile, 'save', size=QSize(16, 16))
         self.btn_save_profile.clicked.connect(self._save_current_profile)
         pg_layout.addWidget(self.btn_save_profile)
 
@@ -244,7 +244,7 @@ class DeployTabMixin:
         
         # Кнопка "Предпросмотр .gitignore" с иконкой
         preview_btn = QPushButton(" " + lang_mgr.get_text("deploy_tab.preview_button"))
-        self.icons.set_button_icon(preview_btn, 'gitignore', size=QSize(16, 16))
+        self.icons.set_button_icon(preview_btn, 'folder', size=QSize(16, 16))
         preview_btn.clicked.connect(self._preview_gitignore)
         options_layout.addWidget(preview_btn)
         two_col2.addWidget(options_group, 1)
@@ -261,7 +261,7 @@ class DeployTabMixin:
         # Кнопка "Очистить лог" с иконкой
         clear_btn = QPushButton(" " + lang_mgr.get_text("deploy_tab.clear_log_button"))
         clear_btn.setFixedWidth(120)
-        self.icons.set_button_icon(clear_btn, 'delete', size=QSize(16, 16))
+        self.icons.set_danger_button_icon(clear_btn, 'clear', size=QSize(16, 16))
         clear_btn.clicked.connect(self._clear_log)
         log_btns.addWidget(clear_btn)
         
@@ -307,7 +307,7 @@ class DeployTabMixin:
             QPushButton:pressed { background-color: #0e44b4; }
             QPushButton:disabled { background-color: #9bb8f5; color: #e0e8ff; }
         """)
-        self.icons.set_button_icon(self.deploy_btn, 'deploy', size=QSize(24, 24))
+        self.icons.set_primary_button_icon(self.deploy_btn, 'deploy', size=QSize(22, 22))
         self.deploy_btn.clicked.connect(self.start_deployment)
         deploy_row.addWidget(self.deploy_btn)
         deploy_row.addStretch()

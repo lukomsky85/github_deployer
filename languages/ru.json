@@ -23,8 +23,8 @@
         "deploy": "Деплой",
         "refresh_branches": "Обновить ветки",
         "clear_log": "Очистить лог",
-        "token_set": "🟢 Токен установлен",
-        "token_not_set": "🔴 Нет токена",
+        "token_set": "Токен задан",
+        "token_not_set": "Токен не задан",
         "token_tooltip": "GitHub токен установлен",
         "no_token_tooltip": "GitHub токен не установлен"
     },
