@@ -60,25 +60,24 @@ class DeployThread(QThread):
             self.log("📦 Staging (git add -A)...")
             GitHelper.run_cmd(['add', '-A'], self.path, self.log)
 
-            if not GitHelper.has_changes(self.path):
-                self.log(lang_mgr.get_text("messages.no_changes"), 'warning')
-                self.finished_signal.emit(True, None)  # ✅ None = нет коммита
-                return
+            # ✅ ИСПРАВЛЕНИЕ: Коммитим только если есть изменения, но НЕ выходим из метода
+            if GitHelper.has_changes(self.path):
+                msg = self.message if self.message else f"🔄 Update {datetime.now().strftime('%H:%M')}"
+                self.log(f"💾 Commit: '{msg}'")
+                GitHelper.run_cmd(['config', 'user.email', 'helper@local'], self.path, self.log)
+                GitHelper.run_cmd(['config', 'user.name', 'Deploy Helper'], self.path, self.log)
+                
+                ok, err = GitHelper.run_cmd(['commit', '-m', msg], self.path, self.log)
+                if not ok: 
+                    raise Exception(err)
+                
+                if self.message: 
+                    CommitHistoryManager.save_message(self.message)
+            else:
+                self.log("✨ Локальные изменения отсутствуют (коммит пропущен)", 'info')
 
-            msg = self.message if self.message else f"🔄 Update {datetime.now().strftime('%H:%M')}"
-            self.log(f"💾 Commit: '{msg}'")
-            GitHelper.run_cmd(['config', 'user.email', 'helper@local'], self.path, self.log)
-            GitHelper.run_cmd(['config', 'user.name', 'Deploy Helper'], self.path, self.log)
-            
-            ok, err = GitHelper.run_cmd(['commit', '-m', msg], self.path, self.log)
-            if not ok: 
-                raise Exception(err)
-            
-            if self.message: 
-                CommitHistoryManager.save_message(self.message)
-
+            # 🚀 ПУШ ВЫПОЛНЯЕТСЯ ВСЕГДА (даже если нет новых коммитов)
             self.log(f"🚀 Pushing to {self.branch}...")
-            # 👇 ИСПРАВЛЕНИЕ: добавлен force=True для перезаписи удалённой ветки
             success, err = GitHelper.push(
                 self.path, 
                 branch=self.branch, 
