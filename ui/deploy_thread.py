@@ -78,7 +78,14 @@ class DeployThread(QThread):
                 CommitHistoryManager.save_message(self.message)
 
             self.log(f"🚀 Pushing to {self.branch}...")
-            success, err = GitHelper.push(self.path, branch=self.branch, token=self.token, callback=self.log)
+            # 👇 ИСПРАВЛЕНИЕ: добавлен force=True для перезаписи удалённой ветки
+            success, err = GitHelper.push(
+                self.path, 
+                branch=self.branch, 
+                token=self.token, 
+                callback=self.log,
+                force=True
+            )
             
             if success:
                 branch_upper = self.branch.upper()
