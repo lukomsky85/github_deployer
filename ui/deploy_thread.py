@@ -9,9 +9,8 @@ from config import DEFAULT_GITIGNORE
 from utils.lang_manager import lang_mgr
 
 class DeployThread(QThread):
-    # Сигналы для общения с UI
-    log_signal = pyqtSignal(str, str)      # (message, level)
-    finished_signal = pyqtSignal(bool, str) # (success, details)
+    log_signal = pyqtSignal(str, str)
+    finished_signal = pyqtSignal(bool, str)
     
     def __init__(self, path, repo, token, message, do_gitignore, branch, create_branch, do_pull=False):
         super().__init__()
@@ -25,7 +24,6 @@ class DeployThread(QThread):
         self.do_pull = do_pull
     
     def log(self, msg, level='info'):
-        """Отправляет сообщение и уровень в UI. Иконки добавляются на стороне интерфейса."""
         self.log_signal.emit(msg, level)
     
     def run(self):
@@ -119,14 +117,18 @@ class DeployThread(QThread):
                 branch=self.branch, 
                 token=self.token, 
                 callback=self.log,
-                force=True  # Принудительная отправка
+                force=True
             )
             
             # ── Обработка результата ──────────────────────────────────
             if success:
                 branch_upper = self.branch.upper()
-                self.log(lang_mgr.get_text("messages.deploy_success").format(branch=branch_upper), 'success')
-                self.finished_signal.emit(True, lang_mgr.get_text("messages.deploy_success_message").format(branch=self.branch))
+                # 🔒 Безопасная замена вместо .format() (не упадёт, если в конфиге нет {branch})
+                success_msg = lang_mgr.get_text("messages.deploy_success").replace("{branch}", branch_upper).replace("{0}", branch_upper)
+                self.log(success_msg, 'success')
+                
+                finish_msg = lang_mgr.get_text("messages.deploy_success_message").replace("{branch}", self.branch).replace("{0}", self.branch)
+                self.finished_signal.emit(True, finish_msg)
             else:
                 if "rejected" in err.lower():
                     if "GH013" in err or "secret" in err.lower():
@@ -138,9 +140,11 @@ class DeployThread(QThread):
                     self.log(lang_mgr.get_text("messages.auth_error"), 'error')
                     self.finished_signal.emit(False, "Auth Failed")
                 else:
-                    self.log(lang_mgr.get_text("messages.push_error").format(error=err), 'error')
+                    err_msg = lang_mgr.get_text("messages.push_error").replace("{error}", str(err)).replace("{0}", str(err))
+                    self.log(err_msg, 'error')
                     self.finished_signal.emit(False, err)
 
         except Exception as e:
-            self.log(lang_mgr.get_text("messages.critical_error").format(error=str(e)), 'error')
+            err_msg = lang_mgr.get_text("messages.critical_error").replace("{error}", str(e)).replace("{0}", str(e))
+            self.log(err_msg, 'error')
             self.finished_signal.emit(False, str(e))
