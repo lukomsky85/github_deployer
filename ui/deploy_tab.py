@@ -5,12 +5,13 @@ from PyQt5.QtWidgets import (
     QPushButton, QTextEdit, QComboBox, QCheckBox, QGroupBox,
     QScrollArea, QFrame, QSizePolicy
 )
-from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtCore import Qt, QTimer, QSize
 
 from config import DEFAULT_GITIGNORE
 from utils.lang_manager import lang_mgr
 from utils.repo_manager import RepositoryManager
+from utils.icon_manager import IconManager  # ← Импорт менеджера иконок
 
 
 class DeployTabMixin:
@@ -33,6 +34,9 @@ class DeployTabMixin:
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(10)
 
+        # ── Инициализация менеджера иконок ─────────────────────────────
+        self.icons = IconManager()
+
         # ── Repository Profile Selector ──────────────────────────────────
         profile_group = QGroupBox(lang_mgr.get_text("deploy_tab.repo_profiles_group"))
         pg_layout = QHBoxLayout(profile_group)
@@ -44,31 +48,39 @@ class DeployTabMixin:
         self.repo_combo.currentIndexChanged.connect(self._on_repo_selected)
         pg_layout.addWidget(self.repo_combo)
 
-        btn_add = QPushButton("+ Добавить" if lang_mgr.current_lang == 'ru' else "+ Add")
-        btn_add.setFixedWidth(90)
+        # Кнопка "Добавить" с иконкой
+        btn_add = QPushButton(" " + ("Добавить" if lang_mgr.current_lang == 'ru' else "Add"))
+        btn_add.setFixedWidth(100)
         btn_add.setToolTip(lang_mgr.get_text("deploy_tab.add_profile_tooltip"))
+        self.icons.set_button_icon(btn_add, 'add', size=QSize(16, 16))
         btn_add.clicked.connect(self._add_repo)
         pg_layout.addWidget(btn_add)
 
-        btn_edit = QPushButton("Изменить" if lang_mgr.current_lang == 'ru' else "Edit")
-        btn_edit.setFixedWidth(80)
+        # Кнопка "Изменить" с иконкой
+        btn_edit = QPushButton(" " + ("Изменить" if lang_mgr.current_lang == 'ru' else "Edit"))
+        btn_edit.setFixedWidth(90)
         btn_edit.setToolTip(lang_mgr.get_text("deploy_tab.edit_profile_tooltip"))
+        self.icons.set_button_icon(btn_edit, 'edit', size=QSize(16, 16))
         btn_edit.clicked.connect(self._edit_repo)
         pg_layout.addWidget(btn_edit)
 
-        btn_del = QPushButton("Удалить" if lang_mgr.current_lang == 'ru' else "Delete")
-        btn_del.setFixedWidth(80)
+        # Кнопка "Удалить" с иконкой
+        btn_del = QPushButton(" " + ("Удалить" if lang_mgr.current_lang == 'ru' else "Delete"))
+        btn_del.setFixedWidth(90)
         btn_del.setToolTip(lang_mgr.get_text("deploy_tab.delete_profile_tooltip"))
         btn_del.setStyleSheet("QPushButton { color: #d20f39; } QPushButton:hover { color: #d20f39; border-color: #d20f39; }")
+        self.icons.set_button_icon(btn_del, 'delete', size=QSize(16, 16))
         btn_del.clicked.connect(self._delete_repo)
         pg_layout.addWidget(btn_del)
 
-        self.btn_save_profile = QPushButton("Сохранить профиль" if lang_mgr.current_lang == 'ru' else "Save Profile")
-        self.btn_save_profile.setFixedWidth(130)
+        # Кнопка "Сохранить профиль" с иконкой
+        self.btn_save_profile = QPushButton(" " + ("Сохранить профиль" if lang_mgr.current_lang == 'ru' else "Save Profile"))
+        self.btn_save_profile.setFixedWidth(150)
         self.btn_save_profile.setStyleSheet(
             "QPushButton { background-color: #e8f0fe; color: #1e66f5; border-color: #b8d0fb; }"
             "QPushButton:hover { background-color: #d0e4fd; }"
         )
+        self.icons.set_button_icon(self.btn_save_profile, 'save', size=QSize(16, 16))
         self.btn_save_profile.clicked.connect(self._save_current_profile)
         pg_layout.addWidget(self.btn_save_profile)
 
@@ -90,8 +102,11 @@ class DeployTabMixin:
         self.path_input.textChanged.connect(self._sync_paths)
         path_row.addWidget(self.path_input)
 
-        browse_btn = QPushButton(lang_mgr.get_text("deploy_tab.browse_button"))
-        browse_btn.setFixedWidth(80)
+        # Кнопка "Обзор" с иконкой
+        browse_btn = QPushButton("")
+        browse_btn.setFixedWidth(40)
+        browse_btn.setToolTip(lang_mgr.get_text("deploy_tab.browse_button"))
+        self.icons.set_button_icon(browse_btn, 'folder', size=QSize(18, 18))
         browse_btn.clicked.connect(lambda: self._browse_folder(self.path_input))
         path_row.addWidget(browse_btn)
         project_layout.addLayout(path_row)
@@ -101,16 +116,21 @@ class DeployTabMixin:
         lbl_quick = QLabel(lang_mgr.get_text("deploy_tab.quick_access") + ":")
         lbl_quick.setStyleSheet("color: #8c8fa1; font-size: 9pt;")
         quick_row.addWidget(lbl_quick)
+        
         cur_btn = QPushButton(lang_mgr.get_text("deploy_tab.current_folder"))
         cur_btn.setFixedHeight(26)
         cur_btn.setStyleSheet("font-size: 9pt; padding: 3px 10px;")
+        self.icons.set_button_icon(cur_btn, 'folder', size=QSize(14, 14))
         cur_btn.clicked.connect(lambda: self.path_input.setText(os.getcwd()))
         quick_row.addWidget(cur_btn)
+        
         desk_btn = QPushButton(lang_mgr.get_text("deploy_tab.desktop"))
         desk_btn.setFixedHeight(26)
         desk_btn.setStyleSheet("font-size: 9pt; padding: 3px 10px;")
+        self.icons.set_button_icon(desk_btn, 'folder', size=QSize(14, 14))
         desk_btn.clicked.connect(lambda: self.path_input.setText(os.path.expanduser("~/Desktop")))
         quick_row.addWidget(desk_btn)
+        
         quick_row.addStretch()
         project_layout.addLayout(quick_row)
 
@@ -134,8 +154,12 @@ class DeployTabMixin:
         self.branch_combo.setEditable(True)
         self.branch_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         branch_row.addWidget(self.branch_combo)
-        refresh_btn = QPushButton(lang_mgr.get_text("deploy_tab.refresh_button"))
-        refresh_btn.setFixedWidth(80)
+        
+        # Кнопка "Обновить ветки" с иконкой
+        refresh_btn = QPushButton("")
+        refresh_btn.setFixedWidth(36)
+        refresh_btn.setToolTip(lang_mgr.get_text("deploy_tab.refresh_button"))
+        self.icons.set_button_icon(refresh_btn, 'refresh', size=QSize(18, 18))
         refresh_btn.clicked.connect(self._refresh_branches)
         branch_row.addWidget(refresh_btn)
         repo_layout.addLayout(branch_row)
@@ -156,8 +180,11 @@ class DeployTabMixin:
         self.token_input.textChanged.connect(self._update_token_status)
         token_row.addWidget(self.token_input)
 
-        paste_btn = QPushButton(lang_mgr.get_text("deploy_tab.paste_button"))
-        paste_btn.setFixedWidth(80)
+        # Кнопка "Вставить" с иконкой
+        paste_btn = QPushButton("")
+        paste_btn.setFixedWidth(36)
+        paste_btn.setToolTip(lang_mgr.get_text("deploy_tab.paste_button"))
+        self.icons.set_button_icon(paste_btn, 'token', size=QSize(18, 18))
         paste_btn.clicked.connect(self._paste_token)
         token_row.addWidget(paste_btn)
 
@@ -192,9 +219,12 @@ class DeployTabMixin:
         self.commit_combo.addItems(self.commit_history)
         self.commit_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         commit_row.addWidget(self.commit_combo)
-        add_btn = QPushButton("+")
+        
+        # Кнопка "Добавить коммит" с иконкой
+        add_btn = QPushButton("")
         add_btn.setFixedWidth(34)
         add_btn.setToolTip(lang_mgr.get_text("deploy_tab.add_commit_tooltip"))
+        self.icons.set_button_icon(add_btn, 'add', size=QSize(16, 16))
         add_btn.clicked.connect(self._add_custom_commit)
         commit_row.addWidget(add_btn)
         commit_layout.addLayout(commit_row)
@@ -203,13 +233,18 @@ class DeployTabMixin:
         options_group = QGroupBox(lang_mgr.get_text("deploy_tab.options_group"))
         options_layout = QVBoxLayout(options_group)
         options_layout.setSpacing(6)
+        
         self.gitignore_check = QCheckBox(lang_mgr.get_text("deploy_tab.gitignore_check"))
         self.gitignore_check.setChecked(True)
         options_layout.addWidget(self.gitignore_check)
+        
         self.create_branch_check = QCheckBox(lang_mgr.get_text("deploy_tab.create_branch_check"))
         self.create_branch_check.setChecked(False)
         options_layout.addWidget(self.create_branch_check)
-        preview_btn = QPushButton(lang_mgr.get_text("deploy_tab.preview_button"))
+        
+        # Кнопка "Предпросмотр .gitignore" с иконкой
+        preview_btn = QPushButton(" " + lang_mgr.get_text("deploy_tab.preview_button"))
+        self.icons.set_button_icon(preview_btn, 'gitignore', size=QSize(16, 16))
         preview_btn.clicked.connect(self._preview_gitignore)
         options_layout.addWidget(preview_btn)
         two_col2.addWidget(options_group, 1)
@@ -222,14 +257,21 @@ class DeployTabMixin:
         log_layout.setSpacing(6)
 
         log_btns = QHBoxLayout()
-        clear_btn = QPushButton(lang_mgr.get_text("deploy_tab.clear_log_button"))
-        clear_btn.setFixedWidth(100)
+        
+        # Кнопка "Очистить лог" с иконкой
+        clear_btn = QPushButton(" " + lang_mgr.get_text("deploy_tab.clear_log_button"))
+        clear_btn.setFixedWidth(120)
+        self.icons.set_button_icon(clear_btn, 'delete', size=QSize(16, 16))
         clear_btn.clicked.connect(self._clear_log)
         log_btns.addWidget(clear_btn)
-        save_log_btn = QPushButton(lang_mgr.get_text("deploy_tab.save_log_button"))
-        save_log_btn.setFixedWidth(100)
+        
+        # Кнопка "Сохранить лог" с иконкой
+        save_log_btn = QPushButton(" " + lang_mgr.get_text("deploy_tab.save_log_button"))
+        save_log_btn.setFixedWidth(120)
+        self.icons.set_button_icon(save_log_btn, 'save', size=QSize(16, 16))
         save_log_btn.clicked.connect(self._save_log)
         log_btns.addWidget(save_log_btn)
+        
         log_btns.addStretch()
         log_layout.addLayout(log_btns)
 
@@ -246,6 +288,8 @@ class DeployTabMixin:
         # ── Deploy Button ────────────────────────────────────────────────
         deploy_row = QHBoxLayout()
         deploy_row.addStretch()
+        
+        # Главная кнопка деплоя с большой иконкой
         self.deploy_btn = QPushButton("  " + lang_mgr.get_text("deploy_tab.deploy_button") + "  ")
         self.deploy_btn.setMinimumHeight(44)
         self.deploy_btn.setMinimumWidth(180)
@@ -263,6 +307,7 @@ class DeployTabMixin:
             QPushButton:pressed { background-color: #0e44b4; }
             QPushButton:disabled { background-color: #9bb8f5; color: #e0e8ff; }
         """)
+        self.icons.set_button_icon(self.deploy_btn, 'deploy', size=QSize(24, 24))
         self.deploy_btn.clicked.connect(self.start_deployment)
         deploy_row.addWidget(self.deploy_btn)
         deploy_row.addStretch()
@@ -347,3 +392,26 @@ class DeployTabMixin:
         self.repo_mgr.update(idx, data)
         self._log(f"Profile '{data['name']}' saved", 'success')
         self._show_info("Profile saved")
+
+    # ── Helper Methods ─────────────────────────────────────────────────
+
+    def _log(self, msg, level='info'):
+        """Добавить сообщение в лог с иконкой статуса"""
+        # Получаем иконку статуса
+        status_icon = self.icons.get_status_icon(level) if hasattr(self, 'icons') else None
+        
+        # Форматируем сообщение с иконкой
+        if isinstance(status_icon, str):
+            formatted = f"[{status_icon}] {msg}"
+        else:
+            icon_map = {'success': '✅', 'warning': '⚠️', 'error': '❌', 'info': 'ℹ️'}
+            formatted = f"[{icon_map.get(level, '•')}] {msg}"
+        
+        # Добавляем в QTextEdit
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%H:%M:%S')
+        self.log_output.append(f"[{timestamp}] {formatted}")
+        
+        # Авто-прокрутка вниз
+        scrollbar = self.log_output.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
