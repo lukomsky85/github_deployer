@@ -24,6 +24,8 @@ from ui.about_tab import AboutTabMixin
 from ui.toolbar import ToolbarMixin
 from ui.menu import MenuMixin
 from ui.helpers import HelpersMixin
+from ui.batch_tab import BatchTabMixin
+from ui.graph_tab import GraphTabMixin
 
 lang_mgr = LanguageManager()
 
@@ -37,7 +39,9 @@ class GitHubDeployerApp(
     AboutTabMixin,
     ToolbarMixin,
     MenuMixin,
-    HelpersMixin
+    HelpersMixin,
+    BatchTabMixin,
+    GraphTabMixin
 ):
     def __init__(self):
         super().__init__()
@@ -80,6 +84,21 @@ class GitHubDeployerApp(
         self.setPalette(palette)
         self.setStyleSheet(STYLESHEET)
 
+    # Порядок вкладок — единственное место, которое нужно менять
+    TAB_DEFS = [
+        ('deploy',       '_create_deploy_tab',    'tabs.deploy'),
+        ('branches',     '_create_branches_tab',  'tabs.branches'),
+        ('gitignore',    '_create_gitignore_tab', None),           # None = фиксированный заголовок
+        ('settings',     '_create_settings_tab',  'tabs.settings'),
+        ('graph',        '_create_graph_tab',      'tabs.graph'),
+        ('batch_deploy', '_create_batch_tab',      'tabs.batch_deploy'),
+        ('about',        '_create_about_tab',      'tabs.about'),
+    ]
+
+    TAB_FIXED_TITLES = {
+        'gitignore': '  .gitignore  ',
+    }
+
     def _setup_ui(self):
         central = QWidget()
         self.setCentralWidget(central)
@@ -91,11 +110,64 @@ class GitHubDeployerApp(
         self.tabs.setDocumentMode(False)
         main_lay.addWidget(self.tabs)
 
-        self.tabs.addTab(self._create_deploy_tab(),    "  " + lang_mgr.get_text("tabs.deploy") + "  ")
-        self.tabs.addTab(self._create_branches_tab(),  "  " + lang_mgr.get_text("tabs.branches") + "  ")
-        self.tabs.addTab(self._create_gitignore_tab(), "  .gitignore  ")
-        self.tabs.addTab(self._create_settings_tab(),  "  " + lang_mgr.get_text("tabs.settings") + "  ")
-        self.tabs.addTab(self._create_about_tab(),     "  " + lang_mgr.get_text("tabs.about") + "  ")
+        self._build_tabs()
+
+    def _build_tabs(self):
+        """Создаёт все вкладки. Используется при старте и при смене языка."""
+        for key, creator, text_key in self.TAB_DEFS:
+            widget = getattr(self, creator)()
+            title  = self.TAB_FIXED_TITLES.get(key) or ("  " + lang_mgr.get_text(text_key) + "  ")
+            self.tabs.addTab(widget, title)
+
+    def _retranslate_tabs(self, current_index):
+        """Пересоздаёт вкладки с новым языком, восстанавливает данные и позицию."""
+        # Сохраняем данные перед удалением виджетов
+        saved = self._collect_ui_state()
+        saved['tab_index'] = current_index
+
+        # Удаляем старые вкладки
+        while self.tabs.count():
+            self.tabs.removeTab(0)
+
+        # Пересоздаём
+        self._build_tabs()
+
+        # Восстанавливаем
+        self._restore_ui_state(saved)
+
+    def _collect_ui_state(self):
+        """Собирает текущее состояние полей ввода."""
+        return {
+            'path':   self.path_input.text()        if hasattr(self, 'path_input')    else self.default_path,
+            'repo':   self.repo_url.text()          if hasattr(self, 'repo_url')      else self.default_repo,
+            'token':  self.token_input.text()       if hasattr(self, 'token_input')   else '',
+            'branch': self.branch_combo.currentText() if hasattr(self, 'branch_combo') else 'main',
+            'commit': self.commit_combo.currentText() if hasattr(self, 'commit_combo') else '',
+            'graph_path': self._graph_path_input.text() if hasattr(self, '_graph_path_input') else '',
+        }
+
+    def _restore_ui_state(self, saved):
+        """Восстанавливает поля ввода после пересоздания вкладок."""
+        if hasattr(self, 'path_input')    and saved.get('path'):
+            self.path_input.setText(saved['path'])
+        if hasattr(self, 'repo_url')      and saved.get('repo'):
+            self.repo_url.setText(saved['repo'])
+        if hasattr(self, 'token_input')   and saved.get('token'):
+            self.token_input.setText(saved['token'])
+        if hasattr(self, 'branch_combo')  and saved.get('branch'):
+            self.branch_combo.setCurrentText(saved['branch'])
+        if hasattr(self, 'commit_combo')  and saved.get('commit'):
+            self.commit_combo.setCurrentText(saved['commit'])
+        if hasattr(self, '_graph_path_input') and saved.get('graph_path'):
+            self._graph_path_input.setText(saved['graph_path'])
+        if hasattr(self, '_batch_token') and hasattr(self, 'token_input'):
+            self._batch_token.setText(saved.get('token', ''))
+
+        idx = saved.get('tab_index', 0)
+        if 0 <= idx < self.tabs.count():
+            self.tabs.setCurrentIndex(idx)
+
+        self._update_token_status()
 
     def _setup_statusbar(self):
         self.statusbar = QStatusBar()

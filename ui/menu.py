@@ -1,5 +1,5 @@
 # ui/menu.py
-from PyQt5.QtWidgets import QAction, QMessageBox
+from PyQt5.QtWidgets import QAction
 from PyQt5.QtCore import QSize
 from utils.lang_manager import lang_mgr
 from utils.icon_manager import IconManager
@@ -89,38 +89,25 @@ class MenuMixin:
         help_menu.addAction(a)
 
     def _change_language(self, code):
+        if lang_mgr.current_lang == code:
+            return
         if not lang_mgr.set_language(code):
             return
-        saved = {
-            'path':      self.path_input.text() if hasattr(self, 'path_input') else self.default_path,
-            'repo':      self.repo_url.text() if hasattr(self, 'repo_url') else self.default_repo,
-            'token':     self.token_input.text() if hasattr(self, 'token_input') else "",
-            'branch':    self.branch_combo.currentText() if hasattr(self, 'branch_combo') else "main",
-            'commit':    self.commit_combo.currentText() if hasattr(self, 'commit_combo') else "",
-            'tab_index': self.tabs.currentIndex(),
-        }
+
+        current_tab = self.tabs.currentIndex()
+
+        # Перестраиваем меню
         self._apply_language()
         self.menuBar().clear()
         self._setup_menu()
+
+        # Обновляем строку статуса
         if hasattr(self, 'status_label'):
             self.status_label.setText(lang_mgr.get_text("status.ready"))
 
-        while self.tabs.count() > 0:
-            self.tabs.removeTab(0)
+        # Пересоздаём все вкладки (включая graph и batch) с сохранением данных
+        self._retranslate_tabs(current_tab)
 
-        self.tabs.addTab(self._create_deploy_tab(),    lang_mgr.get_text("tabs.deploy"))
-        self.tabs.addTab(self._create_branches_tab(),  lang_mgr.get_text("tabs.branches"))
-        self.tabs.addTab(self._create_gitignore_tab(), ".gitignore")
-        self.tabs.addTab(self._create_settings_tab(),  lang_mgr.get_text("tabs.settings"))
-        self.tabs.addTab(self._create_about_tab(),     lang_mgr.get_text("tabs.about"))
-
-        self.path_input.setText(saved['path'])
-        self.repo_url.setText(saved['repo'])
-        self.token_input.setText(saved['token'])
-        self.branch_combo.setCurrentText(saved['branch'])
-        self.commit_combo.setCurrentText(saved['commit'])
-        self.tabs.setCurrentIndex(saved['tab_index'])
-        self._update_token_status()
-
-        QMessageBox.information(self, "Language",
-                                f"Language changed to {'Russian' if code == 'ru' else 'English'}")
+        # Обновляем тулбар
+        if hasattr(self, 'token_status_label'):
+            self._update_token_status()
