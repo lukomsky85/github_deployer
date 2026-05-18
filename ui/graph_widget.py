@@ -104,8 +104,11 @@ class CommitGraphWidget(QWidget):
         font_msg    = QFont("Segoe UI", 9)
         font_meta   = QFont("Segoe UI", 8)
         font_badge  = QFont("Segoe UI", 7, QFont.Bold)
-        fm_msg  = QFontMetrics(font_msg)
-        fm_meta = QFontMetrics(font_meta)
+        
+        # 🔧 ИСПРАВЛЕНИЕ: создаём QFontMetrics для всех шрифтов
+        fm_msg   = QFontMetrics(font_msg)
+        fm_meta  = QFontMetrics(font_meta)
+        fm_badge = QFontMetrics(font_badge)  # ← ДОБАВЛЕНО: было пропущено!
 
         for row in range(row_start, row_end):
             node = self.commits[row]
@@ -134,6 +137,8 @@ class CommitGraphWidget(QWidget):
                 is_tag  = branch.startswith("🏷")
                 bg = QColor("#1e66f5") if is_head else (QColor("#df8e1d") if is_tag else QColor("#40a02b"))
                 text = branch[:18] + ("…" if len(branch) > 18 else "")
+                
+                # 🔧 Теперь fm_badge определён — ошибки не будет
                 bw = fm_badge.horizontalAdvance(text) + 10
                 bh = 16
                 by = row_y + (ROW_H - bh) // 2
