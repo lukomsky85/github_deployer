@@ -28,7 +28,7 @@ class GitignoreTabMixin:
         browse_btn.clicked.connect(lambda: self._browse_folder(self.gitignore_path))
         project_layout.addWidget(browse_btn)
         
-        load_btn = QPushButton("📂 Load .gitignore")
+        load_btn = QPushButton(" Load .gitignore")
         load_btn.clicked.connect(self._load_gitignore_content)
         project_layout.addWidget(load_btn)
         
@@ -47,20 +47,20 @@ class GitignoreTabMixin:
         buttons_group = QGroupBox("Actions")
         buttons_layout = QHBoxLayout(buttons_group)
         
-        reset_btn = QPushButton("⟳ Reset to Default")
+        reset_btn = QPushButton(" Reset to Default")
         reset_btn.clicked.connect(self._reset_gitignore_to_default)
         buttons_layout.addWidget(reset_btn)
         
         buttons_layout.addStretch()
         
-        save_btn = QPushButton("💾 Save .gitignore")
+        save_btn = QPushButton(" Save .gitignore")
         save_btn.clicked.connect(self._save_gitignore_content)
         save_btn.setStyleSheet("background-color: #1e66f5; color: white;")
         buttons_layout.addWidget(save_btn)
         
         layout.addWidget(buttons_group)
         
-        info_label = QLabel("💡 Tip: .gitignore tells Git which files to ignore. Edit carefully!")
+        info_label = QLabel(" Tip: .gitignore tells Git which files to ignore. Edit carefully!")
         info_label.setStyleSheet("color: #df8e1d; font-size: 8pt; padding: 5px;")
         layout.addWidget(info_label)
         
@@ -77,9 +77,9 @@ class GitignoreTabMixin:
         
         gitignore_path = os.path.join(path, '.gitignore')
         if os.path.exists(gitignore_path):
-            self._log(f"📁 Loaded .gitignore from {path}", 'success')
+            self._log(f" Loaded .gitignore from {path}", 'success')
         else:
-            self._log(f"📁 Created new .gitignore template for {path}", 'info')
+            self._log(f" Created new .gitignore template for {path}", 'info')
 
     def _save_gitignore_content(self):
         path = self.gitignore_path.text().strip()
@@ -103,7 +103,7 @@ class GitignoreTabMixin:
                                     QMessageBox.Yes | QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.gitignore_editor.setPlainText(DEFAULT_GITIGNORE)
-            self._log("⟳ .gitignore reset to default template", 'info')
+            self._log(" .gitignore reset to default template", 'info')
 
     def _preview_gitignore(self):
         dialog = QDialog(self)
@@ -123,18 +123,18 @@ class GitignoreTabMixin:
         
         button_layout = QHBoxLayout()
         
-        reset_btn = QPushButton("⟳ Reset to Default")
+        reset_btn = QPushButton(" Reset to Default")
         reset_btn.clicked.connect(lambda: editor.setPlainText(DEFAULT_GITIGNORE))
         button_layout.addWidget(reset_btn)
         
         button_layout.addStretch()
         
-        save_btn = QPushButton("💾 Save")
+        save_btn = QPushButton(" Save")
         save_btn.clicked.connect(lambda: self._save_gitignore_content_from_dialog(editor, self.path_input.text()))
         save_btn.setStyleSheet("background-color: #1e66f5; color: white;")
         button_layout.addWidget(save_btn)
         
-        cancel_btn = QPushButton("❌ Cancel")
+        cancel_btn = QPushButton(" Cancel")
         cancel_btn.clicked.connect(dialog.reject)
         button_layout.addWidget(cancel_btn)
         

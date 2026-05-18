@@ -1,7 +1,8 @@
 # ui/about_tab.py
 import webbrowser
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QGroupBox, QFrame
+    QWidget, QVBoxLayout, QLabel, QPushButton, QGroupBox,
+    QFrame, QScrollArea
 )
 from PyQt5.QtCore import Qt
 
@@ -12,11 +13,22 @@ class AboutTabMixin:
 
     def _create_about_tab(self):
         tab = QWidget()
-        layout = QVBoxLayout(tab)
+        root = QVBoxLayout(tab)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        root.addWidget(scroll)
+
+        content = QWidget()
+        layout = QVBoxLayout(content)
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(16)
+        scroll.setWidget(content)
 
-        # Header card
+        # ── Header card ──────────────────────────────────────────────────
         header = QFrame()
         header.setStyleSheet(
             "QFrame { background-color: #1e66f5; border-radius: 12px; padding: 24px; }"
@@ -35,16 +47,23 @@ class AboutTabMixin:
 
         layout.addWidget(header)
 
-        # Description
+        # ── Description ──────────────────────────────────────────────────
         desc_group = QGroupBox(lang_mgr.get_text("about_tab.description_group"))
         desc_layout = QVBoxLayout(desc_group)
-        description = QLabel(lang_mgr.get_text("about_tab.description"))
+
+        # Преобразуем \n и • в HTML для корректного рендеринга
+        raw = lang_mgr.get_text("about_tab.description")
+        html = self._text_to_html(raw)
+
+        description = QLabel()
+        description.setTextFormat(Qt.RichText)
+        description.setText(html)
         description.setWordWrap(True)
-        description.setStyleSheet("font-size: 10pt; line-height: 1.5;")
+        description.setStyleSheet("font-size: 10pt; color: #4c4f69; line-height: 1.6;")
         desc_layout.addWidget(description)
         layout.addWidget(desc_group)
 
-        # Links
+        # ── Links ────────────────────────────────────────────────────────
         links_group = QGroupBox(lang_mgr.get_text("about_tab.links_group"))
         links_layout = QVBoxLayout(links_group)
         links_layout.setSpacing(8)
@@ -56,9 +75,10 @@ class AboutTabMixin:
         ]:
             btn = QPushButton(lang_mgr.get_text(text_key))
             btn.setStyleSheet(
-                "QPushButton { text-align: left; background: transparent; border: 1px solid #dce0e8;"
-                " color: #1e66f5; padding: 8px 14px; border-radius: 7px; }"
-                "QPushButton:hover { background-color: #e8f0fe; }"
+                "QPushButton { text-align: left; background: transparent;"
+                " border: 1px solid #dce0e8; color: #1e66f5;"
+                " padding: 10px 14px; border-radius: 7px; font-size: 10pt; }"
+                "QPushButton:hover { background-color: #e8f0fe; border-color: #89b4fa; }"
             )
             btn.clicked.connect(lambda checked, u=url: webbrowser.open(u))
             links_layout.addWidget(btn)
@@ -73,10 +93,40 @@ class AboutTabMixin:
         layout.addStretch()
         return tab
 
+    @staticmethod
+    def _text_to_html(text: str) -> str:
+        """Конвертирует plain-text с \n и • в HTML."""
+        lines = text.split('\n')
+        html_parts = []
+        for line in lines:
+            line = line.strip()
+            if not line:
+                html_parts.append('<br>')
+            elif line.startswith('•'):
+                item = line[1:].strip()
+                html_parts.append(
+                    f'<span style="color:#1e66f5; font-weight:600;">•</span>'
+                    f'&nbsp;{item}<br>'
+                )
+            else:
+                # Заголовки разделов (строки без отступа, заканчивающиеся :)
+                if line.endswith(':'):
+                    html_parts.append(
+                        f'<b style="color:#4c4f69;">{line}</b><br>'
+                    )
+                else:
+                    html_parts.append(f'{line}<br>')
+        return ''.join(html_parts)
+
     def _show_help(self):
         from PyQt5.QtWidgets import QMessageBox
-        QMessageBox.information(self, lang_mgr.get_text("dialogs.help.title"),
-                                lang_mgr.get_text("dialogs.help.content"))
+        QMessageBox.information(
+            self,
+            lang_mgr.get_text("dialogs.help.title"),
+            lang_mgr.get_text("dialogs.help.content")
+        )
 
     def _show_about(self):
-        self.tabs.setCurrentIndex(4)
+        """Переключает на вкладку About по ключу (не хардкодит индекс)."""
+        idx = self._tab_index_by_key('about')
+        self.tabs.setCurrentIndex(idx)

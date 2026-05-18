@@ -8,19 +8,29 @@ from utils.icon_manager import IconManager
 class MenuMixin:
 
     def _setup_menu(self):
+        self._rebuild_menu()
+
+    def _rebuild_menu(self):
+        """Строит меню с нуля. Вызывается при старте и при смене языка."""
         self._icons = IconManager()
         menubar = self.menuBar()
+        menubar.clear()
 
         def _act(text_key, icon_name=None, shortcut=None):
-            a = QAction(lang_mgr.get_text(text_key), self)
+            # Убираем эмодзи из текста пункта меню — они не нужны
+            # т.к. у нас есть SVG-иконки
+            text = lang_mgr.get_text(text_key)
+            text = _strip_emoji(text)
+            a = QAction(text, self)
             if icon_name:
                 self._icons.set_action_icon(a, icon_name, size=QSize(16, 16))
             if shortcut:
                 a.setShortcut(shortcut)
             return a
 
-        # File
-        file_menu = menubar.addMenu(lang_mgr.get_text("menu.file"))
+        # ── File ─────────────────────────────────────────────────────────
+        file_label = _strip_emoji(lang_mgr.get_text("menu.file"))
+        file_menu = menubar.addMenu(file_label)
 
         a = _act("menu.select_project", "folder", "Ctrl+O")
         a.triggered.connect(lambda: self._browse_folder(self.path_input))
@@ -36,6 +46,8 @@ class MenuMixin:
         for code in lang_mgr.get_available_languages():
             name = "Русский" if code == 'ru' else "English"
             la = QAction(name, self)
+            la.setCheckable(True)
+            la.setChecked(lang_mgr.current_lang == code)
             la.triggered.connect(lambda checked, c=code: self._change_language(c))
             lang_menu.addAction(la)
 
@@ -45,46 +57,49 @@ class MenuMixin:
         a.triggered.connect(self.close)
         file_menu.addAction(a)
 
-        # Branches
-        branch_menu = menubar.addMenu(lang_mgr.get_text("menu.branches"))
-        for text_key, action_name in [
-            ("menu.create_branch", "create"),
-            ("menu.switch_branch", "switch"),
-            ("menu.delete_branch", "delete"),
+        # ── Branches ─────────────────────────────────────────────────────
+        branch_label = _strip_emoji(lang_mgr.get_text("menu.branches"))
+        branch_menu = menubar.addMenu(branch_label)
+
+        for text_key, action_name, icon_name in [
+            ("menu.create_branch", "create", "add"),
+            ("menu.switch_branch", "switch", "refresh"),
+            ("menu.delete_branch", "delete", "delete"),
         ]:
-            a = QAction(lang_mgr.get_text(text_key), self)
+            a = _act(text_key, icon_name)
             a.triggered.connect(lambda checked, n=action_name: self._handle_branch_action(n))
             branch_menu.addAction(a)
 
         branch_menu.addSeparator()
-        a = QAction(lang_mgr.get_text("menu.merge_branches"), self)
+        a = _act("menu.merge_branches", "branch")
         a.triggered.connect(lambda: self._handle_branch_action('merge'))
         branch_menu.addAction(a)
 
-        # Settings
-        settings_menu = menubar.addMenu(lang_mgr.get_text("menu.settings"))
+        # ── Settings ─────────────────────────────────────────────────────
+        settings_label = _strip_emoji(lang_mgr.get_text("menu.settings"))
+        settings_menu = menubar.addMenu(settings_label)
 
-        a = QAction(lang_mgr.get_text("menu.manage_token"), self)
+        a = _act("menu.manage_token", "token")
         a.triggered.connect(self._manage_token)
         settings_menu.addAction(a)
 
-        a = QAction(lang_mgr.get_text("menu.clear_history"), self)
+        a = _act("menu.clear_history", "clear")
         a.triggered.connect(self._clear_history)
         settings_menu.addAction(a)
 
-        a = QAction(lang_mgr.get_text("menu.reset_settings"), self)
+        a = _act("menu.reset_settings", "settings")
         a.triggered.connect(self._reset_settings)
         settings_menu.addAction(a)
 
-        # Help
-        help_menu = menubar.addMenu(lang_mgr.get_text("menu.help"))
+        # ── Help ─────────────────────────────────────────────────────────
+        help_label = _strip_emoji(lang_mgr.get_text("menu.help"))
+        help_menu = menubar.addMenu(help_label)
 
-        a = QAction(lang_mgr.get_text("menu.help"), self)
-        a.setShortcut("F1")
+        a = _act("menu.help", "about", "F1")
         a.triggered.connect(self._show_help)
         help_menu.addAction(a)
 
-        a = QAction(lang_mgr.get_text("menu.about"), self)
+        a = _act("menu.about", "about")
         a.triggered.connect(self._show_about)
         help_menu.addAction(a)
 
@@ -96,18 +111,35 @@ class MenuMixin:
 
         current_tab = self.tabs.currentIndex()
 
-        # Перестраиваем меню
+        # 1. Меню
         self._apply_language()
-        self.menuBar().clear()
-        self._setup_menu()
+        self._rebuild_menu()
 
-        # Обновляем строку статуса
+        # 2. Тулбар (тултипы)
+        self._retranslate_toolbar()
+
+        # 3. Статусбар
         if hasattr(self, 'status_label'):
             self.status_label.setText(lang_mgr.get_text("status.ready"))
 
-        # Пересоздаём все вкладки (включая graph и batch) с сохранением данных
+        # 4. Все вкладки
         self._retranslate_tabs(current_tab)
 
-        # Обновляем тулбар
-        if hasattr(self, 'token_status_label'):
-            self._update_token_status()
+        # 5. Токен-статус
+        self._update_token_status()
+
+
+def _strip_emoji(text: str) -> str:
+    """Убирает эмодзи и лишние пробелы из строки для меню."""
+    import re
+    # Удаляем символы эмодзи (Unicode ranges)
+    text = re.sub(
+        r'[\U0001F000-\U0001FFFF'
+        r'\U00002600-\U000027FF'
+        r'\U0000FE00-\U0000FEFF'
+        r'\u2600-\u27FF'
+        r'\U0001F300-\U0001F9FF'
+        r']+',
+        '', text
+    )
+    return text.strip()

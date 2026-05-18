@@ -106,7 +106,7 @@ class SettingsTabMixin:
             self.default_repo_input.setText(self.default_repo)
             self.path_input.setText(self.default_path)
             self.repo_url.setText(self.default_repo)
-            self._log("🔄 Settings reset to defaults", 'warning')
+            self._log(" Settings reset to defaults", 'warning')
 
     def _clear_history(self):
         reply = QMessageBox.question(self, lang_mgr.get_text("buttons.ok"), 

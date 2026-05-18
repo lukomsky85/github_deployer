@@ -110,14 +110,14 @@ class BatchDeployThread(QThread):
                 )
 
                 if success:
-                    log(f"✅ Done: {name}", 'success')
+                    log(f" Done: {name}", 'success')
                     success_count += 1
                     self.project_finished.emit(i, True, "")
                 else:
                     raise Exception(err or "Push failed")
 
             except Exception as e:
-                log(f"❌ Error: {e}", 'error')
+                log(f" Error: {e}", 'error')
                 self.project_finished.emit(i, False, str(e))
 
         self.all_finished.emit(success_count, len(self.tasks))
@@ -165,7 +165,7 @@ class ProjectCard(QFrame):
         self.status_label.setStyleSheet("font-size: 9pt; font-weight: 600;")
         header.addWidget(self.status_label)
 
-        remove_btn = QPushButton("✕")
+        remove_btn = QPushButton("")
         remove_btn.setFixedSize(22, 22)
         remove_btn.setStyleSheet("""
             QPushButton {
@@ -188,7 +188,7 @@ class ProjectCard(QFrame):
         url  = self.repo_data.get('url', '')
         br   = self.repo_data.get('branch', 'main')
 
-        for icon, text in [("📁", path), ("🔗", url), ("🌿", br)]:
+        for icon, text in [("", path), ("", url), ("", br)]:
             lbl = QLabel(f"{icon} {text}" if text else f"{icon} —")
             lbl.setStyleSheet("font-size: 8.5pt; color: #6c6f85;")
             lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -218,8 +218,8 @@ class ProjectCard(QFrame):
         styles = {
             'idle':     ("Waiting",   "#8c8fa1"),
             'running':  ("Running...", "#1e66f5"),
-            'success':  ("✅ Done",    "#40a02b"),
-            'error':    ("❌ Failed",  "#d20f39"),
+            'success':  (" Done",    "#40a02b"),
+            'error':    (" Failed",  "#d20f39"),
             'skipped':  ("Skipped",   "#df8e1d"),
         }
         label, color = styles.get(status, ("", "#8c8fa1"))
@@ -708,14 +708,14 @@ class BatchTabMixin:
             if index < len(self._batch_selected_cards):
                 self._batch_selected_cards[index].set_status('success')
             self._batch_append_log(
-                f"✅ [{index+1}] {self._batch_selected_cards[index].repo_data.get('name','')}", 'success'
+                f" [{index+1}] {self._batch_selected_cards[index].repo_data.get('name','')}", 'success'
             )
         else:
             self._fail_count += 1
             if index < len(self._batch_selected_cards):
                 self._batch_selected_cards[index].set_status('error', msg)
             self._batch_append_log(
-                f"❌ [{index+1}] {self._batch_selected_cards[index].repo_data.get('name','')} — {msg}", 'error'
+                f" [{index+1}] {self._batch_selected_cards[index].repo_data.get('name','')} — {msg}", 'error'
             )
 
         self._batch_progress.setValue(self._done_count)

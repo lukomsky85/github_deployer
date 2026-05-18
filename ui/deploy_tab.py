@@ -404,7 +404,7 @@ class DeployTabMixin:
         if isinstance(status_icon, str):
             formatted = f"[{status_icon}] {msg}"
         else:
-            icon_map = {'success': '✅', 'warning': '⚠️', 'error': '❌', 'info': 'ℹ️'}
+            icon_map = {'success': '', 'warning': '️', 'error': '', 'info': '️'}
             formatted = f"[{icon_map.get(level, '•')}] {msg}"
         
         # Добавляем в QTextEdit

@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (
     QTabWidget, QStatusBar, QProgressBar, QMessageBox, QLabel,
     QStyleFactory
 )
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QSize, QTimer
 from PyQt5.QtGui import QPalette, QColor, QFont
 
 from config import COLORS, STYLESHEET
@@ -85,18 +85,19 @@ class GitHubDeployerApp(
         self.setStyleSheet(STYLESHEET)
 
     # Порядок вкладок — единственное место, которое нужно менять
+    # (key, creator_method, text_key_or_None, icon_name)
     TAB_DEFS = [
-        ('deploy',       '_create_deploy_tab',    'tabs.deploy'),
-        ('branches',     '_create_branches_tab',  'tabs.branches'),
-        ('gitignore',    '_create_gitignore_tab', None),           # None = фиксированный заголовок
-        ('settings',     '_create_settings_tab',  'tabs.settings'),
-        ('graph',        '_create_graph_tab',      'tabs.graph'),
-        ('batch_deploy', '_create_batch_tab',      'tabs.batch_deploy'),
-        ('about',        '_create_about_tab',      'tabs.about'),
+        ('deploy',       '_create_deploy_tab',    'tabs.deploy',        'deploy'),
+        ('branches',     '_create_branches_tab',  'tabs.branches',      'branch'),
+        ('gitignore',    '_create_gitignore_tab', None,                 'folder'),
+        ('settings',     '_create_settings_tab',  'tabs.settings',      'settings'),
+        ('graph',        '_create_graph_tab',      'tabs.graph',         'branch'),
+        ('batch_deploy', '_create_batch_tab',      'tabs.batch_deploy',  'push'),
+        ('about',        '_create_about_tab',      'tabs.about',         'about'),
     ]
 
     TAB_FIXED_TITLES = {
-        'gitignore': '  .gitignore  ',
+        'gitignore': '.gitignore',
     }
 
     def _setup_ui(self):
@@ -108,16 +109,42 @@ class GitHubDeployerApp(
 
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(False)
+        self.tabs.setIconSize(QSize(16, 16))
+        self.tabs.currentChanged.connect(self._on_tab_changed)
         main_lay.addWidget(self.tabs)
 
         self._build_tabs()
 
     def _build_tabs(self):
-        """Создаёт все вкладки. Используется при старте и при смене языка."""
-        for key, creator, text_key in self.TAB_DEFS:
+        """Создаёт все вкладки с иконками. Используется при старте и при смене языка."""
+        from utils.icon_manager import IconManager
+        icons = IconManager()
+        for key, creator, text_key, icon_name in self.TAB_DEFS:
             widget = getattr(self, creator)()
-            title  = self.TAB_FIXED_TITLES.get(key) or ("  " + lang_mgr.get_text(text_key) + "  ")
+            title  = self.TAB_FIXED_TITLES.get(key) or lang_mgr.get_text(text_key)
             self.tabs.addTab(widget, title)
+            idx = self.tabs.count() - 1
+            # Иконка вкладки — цвет акцент для активной, серый для остальных
+            icon = icons.get(icon_name, color='#6c6f85', size=QSize(16, 16))
+            if icon:
+                self.tabs.setTabIcon(idx, icon)
+
+    def _on_tab_changed(self, index):
+        """Меняет цвет иконки активной вкладки на акцентный синий."""
+        from utils.icon_manager import IconManager
+        icons = IconManager()
+        for i, (key, creator, text_key, icon_name) in enumerate(self.TAB_DEFS):
+            color = '#1e66f5' if i == index else '#6c6f85'
+            icon = icons.get(icon_name, color=color, size=QSize(16, 16))
+            if icon:
+                self.tabs.setTabIcon(i, icon)
+
+    def _tab_index_by_key(self, key):
+        """Возвращает индекс вкладки по ключу из TAB_DEFS."""
+        for i, (k, *_) in enumerate(self.TAB_DEFS):
+            if k == key:
+                return i
+        return 0
 
     def _retranslate_tabs(self, current_index):
         """Пересоздаёт вкладки с новым языком, восстанавливает данные и позицию."""

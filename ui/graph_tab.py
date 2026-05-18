@@ -120,14 +120,14 @@ class CommitDetailPanel(QWidget):
         self._current_sha = node.sha
         self._title.setText(node.message)
         self._sha_label.setText(node.sha)
-        self._author.setText(f"👤  {node.author}")
-        self._date.setText(f"📅  {node.date}")
+        self._author.setText(f"  {node.author}")
+        self._date.setText(f"  {node.date}")
         branches_str = "  ".join(
             f"<span style='background:#1e66f5;color:#fff;"
             f"border-radius:3px;padding:1px 5px;font-size:8pt;'>{b}</span>"
             for b in node.branches
         ) if node.branches else "—"
-        self._branches.setText(f"🌿  {branches_str}" if node.branches else "🌿  —")
+        self._branches.setText(f"  {branches_str}" if node.branches else "  —")
         self._branches.setTextFormat(Qt.RichText)
         self._parents_label.setText("\n".join(node.parents) if node.parents else "—  (initial commit)")
 
