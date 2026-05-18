@@ -50,7 +50,7 @@ class GitHubDeployerApp(
         self.setMinimumSize(900, 650)
 
         self.default_path = os.getcwd()
-        self.default_repo = "https://github.com/lukomsky85/app-up360.git"
+        self.default_repo = "https://github.com/username/repository.git"
         self.commit_history = CommitHistoryManager.load_history()
         self.repo_mgr = RepositoryManager()
 
