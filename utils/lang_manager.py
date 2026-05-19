@@ -2,101 +2,92 @@
 import os
 import json
 
+
 class LanguageManager:
-    """Менеджер локализации с загрузкой из внешних файлов и поддержкой вложенных ключей"""
-    
-    def __init__(self, lang_dir='languages', fallback_lang='en'):
-        self.lang_dir = lang_dir
-        self.fallback_lang = fallback_lang
-        self.current_lang = fallback_lang
-        self._translations = {}
-        self._fallback = {}
-        self.on_language_changed = None
-        
-        self._load_fallback()
-        self.set_language(fallback_lang)
-    
-    def _load_fallback(self):
-        """Загружает язык по умолчанию (для фолбэка)"""
-        path = os.path.join(self.lang_dir, f"{self.fallback_lang}.json")
-        if os.path.exists(path):
-            try:
-                with open(path, 'r', encoding='utf-8') as f:
-                    self._fallback = json.load(f)
-            except Exception:
-                pass
-    
-    def set_language(self, lang_code):
-        """Загружает переводы для указанного языка"""
-        path = os.path.join(self.lang_dir, f"{lang_code}.json")
-        
-        if not os.path.exists(path):
-            return False
-        
+    """
+    Глобальный синглтон для управления языком.
+    Язык сохраняется в settings.json и загружается при старте.
+    """
+    _SETTINGS_FILE = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        'settings.json'
+    )
+
+    def __init__(self):
+        self.current_lang = 'en'   # fallback
+        self.translations = {}
+        # Загружаем сохранённый язык, иначе English
+        saved = self._load_saved_lang()
+        self._load_language(saved or 'en')
+
+    def _get_lang_path(self, lang_code):
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        return os.path.join(base_dir, 'languages', f'{lang_code}.json')
+
+    def _load_language(self, lang_code):
+        path = self._get_lang_path(lang_code)
         try:
             with open(path, 'r', encoding='utf-8') as f:
-                self._translations = json.load(f)
-        except Exception:
+                self.translations = json.load(f)
+                self.current_lang = lang_code
+                return True
+        except Exception as e:
+            print(f"[lang_manager] Failed to load '{lang_code}': {e}")
             return False
-        
-        self.current_lang = lang_code
-        
-        if self.on_language_changed:
-            self.on_language_changed()
-        
-        return True
-    
-    def _get_nested(self, data, key, default=None):
-        """
-        Получает значение из вложенного dict по ключу с точками.
-        Пример: _get_nested(data, "menu.file") → data["menu"]["file"]
-        """
-        if not key:
-            return default
-        
-        keys = key.split('.')
-        value = data
-        
-        for k in keys:
-            if isinstance(value, dict) and k in value:
-                value = value[k]
-            else:
-                return default
-        
-        return value
-    
+
+    def set_language(self, lang_code):
+        """Сменить язык и сохранить выбор."""
+        if self._load_language(lang_code):
+            self._save_lang(lang_code)
+            return True
+        return False
+
     def get_text(self, key, **kwargs):
-        """
-        Получает текст по ключу с поддержкой:
-        - вложенных ключей: "menu.file" → data["menu"]["file"]
-        - форматирования: .format(**kwargs)
-        - фолбэка на английский, если ключ не найден
-        """
-        # Ищем в текущем языке
-        text = self._get_nested(self._translations, key)
-        
-        # Если не нашли — берём из фолбэка
-        if text is None:
-            text = self._get_nested(self._fallback, key, f"[MISSING:{key}]")
-        
-        # Форматируем, если переданы аргументы
-        if kwargs and isinstance(text, str):
+        """Получить перевод по точечному ключу: 'menu.file' -> translations['menu']['file']."""
+        keys = key.split('.')
+        value = self.translations
+        for k in keys:
+            if isinstance(value, dict):
+                value = value.get(k, key)
+            else:
+                return key   # ключ не найден — возвращаем сам ключ как заглушку
+        if isinstance(value, str) and kwargs:
             try:
-                text = text.format(**kwargs)
-            except (KeyError, ValueError, IndexError):
-                pass  # Если форматирование не удалось — возвращаем как есть
-        
-        return text
-    
+                return value.format(**kwargs)
+            except Exception:
+                pass
+        return value if isinstance(value, str) else key
+
     def get_available_languages(self):
-        """Возвращает список доступных языков (коды)"""
-        langs = []
-        if os.path.exists(self.lang_dir):
-            for f in os.listdir(self.lang_dir):
-                if f.endswith('.json'):
-                    langs.append(f.replace('.json', ''))
-        return langs or [self.fallback_lang]
+        return ['en', 'ru']
+
+    # ── Persist ──────────────────────────────────────────────────────────────
+
+    def _load_saved_lang(self):
+        """Читает сохранённый язык из settings.json."""
+        try:
+            with open(self._SETTINGS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data.get('language')
+        except Exception:
+            return None
+
+    def _save_lang(self, lang_code):
+        """Сохраняет язык в settings.json (мёрджит с существующими настройками)."""
+        data = {}
+        try:
+            with open(self._SETTINGS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception:
+            pass
+        data['language'] = lang_code
+        try:
+            with open(self._SETTINGS_FILE, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            print(f"[lang_manager] Failed to save language: {e}")
 
 
-# Глобальный экземпляр для удобного импорта
+# ── Глобальный синглтон ───────────────────────────────────────────────────────
+# Все модули импортируют именно этот объект — он один на всё приложение.
 lang_mgr = LanguageManager()

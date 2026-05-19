@@ -10,7 +10,7 @@ from PyQt5.QtCore import Qt, QSize, QTimer
 from PyQt5.QtGui import QPalette, QColor, QFont
 
 from config import COLORS, STYLESHEET
-from utils.lang_manager import LanguageManager
+from utils.lang_manager import lang_mgr
 from utils.repo_manager import RepositoryManager
 from utils.git_helper import GitHelper
 from utils.history import CommitHistoryManager
@@ -27,7 +27,6 @@ from ui.helpers import HelpersMixin
 from ui.batch_tab import BatchTabMixin
 from ui.graph_tab import GraphTabMixin
 
-lang_mgr = LanguageManager()
 
 
 class GitHubDeployerApp(
@@ -60,6 +59,7 @@ class GitHubDeployerApp(
         self._setup_toolbar()
         self._setup_statusbar()
 
+        self._load_app_state()
         self._load_saved_token()
         self._update_token_status()
 
@@ -123,18 +123,24 @@ class GitHubDeployerApp(
             widget = getattr(self, creator)()
             title  = self.TAB_FIXED_TITLES.get(key) or lang_mgr.get_text(text_key)
             self.tabs.addTab(widget, title)
-            idx = self.tabs.count() - 1
-            # Иконка вкладки — цвет акцент для активной, серый для остальных
+            # Все иконки серые — _on_tab_changed сразу перекрасит активную в белую
             icon = icons.get(icon_name, color='#6c6f85', size=QSize(16, 16))
             if icon:
-                self.tabs.setTabIcon(idx, icon)
+                self.tabs.setTabIcon(self.tabs.count() - 1, icon)
+        # Применяем цвет активной вкладки сразу после построения
+        self._on_tab_changed(self.tabs.currentIndex())
 
     def _on_tab_changed(self, index):
-        """Меняет цвет иконки активной вкладки на акцентный синий."""
+        """Меняет цвет иконок: белая на активной (синий фон), серые на остальных."""
         from utils.icon_manager import IconManager
         icons = IconManager()
         for i, (key, creator, text_key, icon_name) in enumerate(self.TAB_DEFS):
-            color = '#1e66f5' if i == index else '#6c6f85'
+            if i == index:
+                # Активная вкладка — синий фон, иконка белая
+                color = '#ffffff'
+            else:
+                # Неактивная — светло-серый фон, иконка серая
+                color = '#6c6f85'
             icon = icons.get(icon_name, color=color, size=QSize(16, 16))
             if icon:
                 self.tabs.setTabIcon(i, icon)
@@ -266,8 +272,46 @@ class GitHubDeployerApp(
             self._show_error(lang_mgr.get_text("errors.deploy_failed"), message)
 
     def closeEvent(self, event):
-        if self.save_token_check.isChecked() and self.token_input.text().strip():
-            from utils.crypto import TokenManager
-            TokenManager.save_token(self.token_input.text().strip())
-        self._save_settings()
+        if hasattr(self, 'save_token_check') and self.save_token_check.isChecked():
+            token = self.token_input.text().strip() if hasattr(self, 'token_input') else ''
+            if token:
+                from utils.crypto import TokenManager
+                TokenManager.save_token(token)
+        self._save_app_state()
         event.accept()
+
+    def _save_app_state(self):
+        """Сохраняет настройки приложения (язык, путь, репо) в settings.json."""
+        import json
+        settings_file = lang_mgr._SETTINGS_FILE
+        data = {}
+        try:
+            with open(settings_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception:
+            pass
+        data['language']     = lang_mgr.current_lang
+        data['default_path'] = self.path_input.text() if hasattr(self, 'path_input') else ''
+        data['default_repo'] = self.repo_url.text()   if hasattr(self, 'repo_url')   else ''
+        data['last_branch']  = self.branch_combo.currentText() if hasattr(self, 'branch_combo') else 'main'
+        try:
+            with open(settings_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            print(f"[main_window] Failed to save app state: {e}")
+
+    def _load_app_state(self):
+        """Загружает сохранённые настройки и применяет их к полям UI."""
+        import json
+        try:
+            with open(lang_mgr._SETTINGS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception:
+            return
+        if data.get('default_path') and hasattr(self, 'path_input'):
+            self.path_input.setText(data['default_path'])
+            self.default_path = data['default_path']
+        if data.get('default_repo') and hasattr(self, 'repo_url'):
+            self.repo_url.setText(data['default_repo'])
+        if data.get('last_branch') and hasattr(self, 'branch_combo'):
+            self.branch_combo.setCurrentText(data['last_branch'])
