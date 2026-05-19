@@ -237,7 +237,6 @@ class TokenManager:
     def mask_url(url: str) -> str:
         """
         Маскирует токен в URL перед выводом в лог.
-        https://ghp_AbCd@github.com/... → https://****@github.com/...
         """
         import re
         return re.sub(r'(https?://)([^@]+)(@)', r'\1****\3', url)
