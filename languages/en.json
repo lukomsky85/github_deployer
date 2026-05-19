@@ -101,7 +101,12 @@
         "security_group": "Security",
         "delete_token_button": "Delete Saved Token",
         "check_token_button": "Check Token",
-        "save_settings_button": "Save Settings"
+        "save_settings_button": "Save Settings",
+        "storage_backend": "Token storage",
+        "stored_token": "Saved token",
+        "no_stored_token": "No token saved",
+        "keyring_hint": "Install \"keyring\" package to use your OS secure storage (Windows Credential Manager / macOS Keychain / Linux SecretService) instead of an encrypted file.",
+        "no_storage_hint": "No secure storage available. Install \"cryptography\" or \"keyring\" package."
     },
     "about_tab": {
         "description": "A modern GUI tool for quick GitHub deployment with full branch management support.\n\nKey Features:\n• Automatic Git repository initialization\n• Encrypted token storage\n• Commit message history\n• Multiple branch support (create, switch, delete, merge)\n• Automatic .gitignore generation\n• Modern Material Design interface\n• Keyboard shortcuts support\n\nRequirements:\n• Git installed (git-scm.com)\n• Python 3.6+\n• cryptography package (optional)",

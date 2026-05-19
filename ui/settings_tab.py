@@ -1,5 +1,6 @@
 # ui/settings_tab.py
 import os
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit, 
     QComboBox, QPushButton, QGroupBox, QMessageBox, QFileDialog, 
@@ -60,18 +61,50 @@ class SettingsTabMixin:
         
         security_group = QGroupBox(lang_mgr.get_text("settings_tab.security_group"))
         security_layout = QVBoxLayout(security_group)
-        
+        security_layout.setSpacing(8)
+
+        # Инфо о хранилище
+        info = TokenManager.storage_info()
+        backend_icons = {
+            'keyring': ('✅', '#40a02b'),
+            'fernet':  ('⚠️', '#df8e1d'),
+            'none':    ('❌', '#d20f39'),
+        }
+        icon_text, color = backend_icons.get(info['backend'], ('❓', '#8c8fa1'))
+        storage_lbl = QLabel(
+            f"{icon_text}  <b>{lang_mgr.get_text('settings_tab.storage_backend')}:</b> "
+            f"<span style='color:{color};'>{info['backend_name']}</span>"
+        )
+        storage_lbl.setTextFormat(Qt.RichText)
+        security_layout.addWidget(storage_lbl)
+
+        if info['has_token']:
+            token_lbl = QLabel(
+                f"🔑  <b>{lang_mgr.get_text('settings_tab.stored_token')}:</b> "
+                f"<span style='font-family:monospace; color:#89b4fa;'>{info['masked']}</span>"
+            )
+            token_lbl.setTextFormat(Qt.RichText)
+            security_layout.addWidget(token_lbl)
+        else:
+            no_token_lbl = QLabel(f"🔑  {lang_mgr.get_text('settings_tab.no_stored_token')}")
+            no_token_lbl.setStyleSheet("color: #8c8fa1;")
+            security_layout.addWidget(no_token_lbl)
+
         security_buttons = QHBoxLayout()
         delete_token_btn = QPushButton(lang_mgr.get_text("settings_tab.delete_token_button"))
+        delete_token_btn.setStyleSheet(
+            "QPushButton { color: #d20f39; border-color: #fca5a5; }"
+            "QPushButton:hover { background: #fff1f2; }"
+        )
         delete_token_btn.clicked.connect(self._delete_token)
         security_buttons.addWidget(delete_token_btn)
-        
+
         check_token_btn = QPushButton(lang_mgr.get_text("settings_tab.check_token_button"))
         check_token_btn.clicked.connect(self._check_token)
         security_buttons.addWidget(check_token_btn)
         security_buttons.addStretch()
         security_layout.addLayout(security_buttons)
-        
+
         layout.addWidget(security_group)
         
         save_btn = QPushButton(lang_mgr.get_text("settings_tab.save_settings_button"))
@@ -159,26 +192,68 @@ class SettingsTabMixin:
             QMessageBox.warning(self, lang_mgr.get_text("buttons.ok"), lang_mgr.get_text("messages.token_check_unusual"))
 
     def _manage_token(self):
+        from PyQt5.QtWidgets import QDialog, QVBoxLayout, QDialogButtonBox
         dialog = QDialog(self)
         dialog.setWindowTitle(lang_mgr.get_text("dialogs.manage_token.title"))
-        dialog.setMinimumWidth(500)
-        
-        layout = QVBoxLayout(dialog)
-        
-        current_token = TokenManager.load_token()
-        status = lang_mgr.get_text("dialogs.manage_token.status_saved") if current_token else lang_mgr.get_text("dialogs.manage_token.status_not_saved")
-        layout.addWidget(QLabel(f"Status: {status}"))
-        
-        if current_token:
-            masked = f"{current_token[:8]}...{current_token[-4:]}"
-            layout.addWidget(QLabel(lang_mgr.get_text("dialogs.manage_token.token_masked").format(masked)))
-        
+        dialog.setMinimumWidth(460)
+
+        lay = QVBoxLayout(dialog)
+        lay.setSpacing(12)
+
+        info = TokenManager.storage_info()
+
+        # Бэкенд
+        backend_icons = {'keyring': '✅', 'fernet': '⚠️', 'none': '❌'}
+        backend_colors = {'keyring': '#40a02b', 'fernet': '#df8e1d', 'none': '#d20f39'}
+        icon = backend_icons.get(info['backend'], '❓')
+        color = backend_colors.get(info['backend'], '#8c8fa1')
+
+        lbl_backend = QLabel(
+            f"{icon}  <b>{lang_mgr.get_text('settings_tab.storage_backend')}:</b><br>"
+            f"<span style='color:{color}; font-size:10pt;'>{info['backend_name']}</span>"
+        )
+        lbl_backend.setTextFormat(Qt.RichText)
+        lay.addWidget(lbl_backend)
+
+        # Токен
+        if info['has_token']:
+            lbl_token = QLabel(
+                f"🔑  <b>{lang_mgr.get_text('settings_tab.stored_token')}:</b> "
+                f"<span style='font-family:monospace; color:#89b4fa; font-size:11pt;'>{info['masked']}</span>"
+            )
+            lbl_token.setTextFormat(Qt.RichText)
+        else:
+            lbl_token = QLabel(f"🔑  {lang_mgr.get_text('settings_tab.no_stored_token')}")
+            lbl_token.setStyleSheet("color: #8c8fa1;")
+        lay.addWidget(lbl_token)
+
+        # Подсказка по безопасности
+        if info['backend'] == 'fernet':
+            hint = QLabel(lang_mgr.get_text("settings_tab.keyring_hint"))
+            hint.setWordWrap(True)
+            hint.setStyleSheet(
+                "background:#fff7ed; border:1px solid #fed7aa; border-radius:6px;"
+                "padding:8px; color:#9a3412; font-size:9pt;"
+            )
+            lay.addWidget(hint)
+        elif info['backend'] == 'none':
+            hint = QLabel(lang_mgr.get_text("settings_tab.no_storage_hint"))
+            hint.setWordWrap(True)
+            hint.setStyleSheet(
+                "background:#fff1f2; border:1px solid #fca5a5; border-radius:6px;"
+                "padding:8px; color:#9f1239; font-size:9pt;"
+            )
+            lay.addWidget(hint)
+
         buttons = QDialogButtonBox(QDialogButtonBox.Close)
-        if current_token:
-            delete_btn = buttons.addButton(lang_mgr.get_text("dialogs.manage_token.delete"), QDialogButtonBox.DestructiveRole)
+        if info['has_token']:
+            delete_btn = buttons.addButton(
+                lang_mgr.get_text("dialogs.manage_token.delete"),
+                QDialogButtonBox.DestructiveRole
+            )
+            delete_btn.setStyleSheet("color: #d20f39;")
             delete_btn.clicked.connect(lambda: [self._delete_token(), dialog.accept()])
-        
+
         buttons.rejected.connect(dialog.reject)
-        layout.addWidget(buttons)
-        
+        lay.addWidget(buttons)
         dialog.exec_()
