@@ -253,23 +253,31 @@ class GitHubDeployerApp(
         self.deploy_thread.finished_signal.connect(self._deployment_finished)
         self.deploy_thread.start()
 
-    def _deployment_finished(self, success, message):
+    def _deployment_finished(self, success, branch_or_err):
         self.progress_bar.setVisible(False)
         self.deploy_btn.setEnabled(True)
 
         if success:
+            branch = branch_or_err
             self.status_label.setText(lang_mgr.get_text("status.ready"))
-            self._log(lang_mgr.get_text("messages.deploy_success_message").format(message), 'success')
             self._refresh_branches()
-            reply = QMessageBox.question(self, lang_mgr.get_text("messages.success"),
-                                         lang_mgr.get_text("messages.deploy_success_question").format(message),
-                                         QMessageBox.Yes | QMessageBox.No)
-            if reply == QMessageBox.Yes:
+
+            # Кастомный диалог с переведёнными кнопками
+            dlg = QMessageBox(self)
+            dlg.setWindowTitle(lang_mgr.get_text("messages.success"))
+            dlg.setText(lang_mgr.get_text("messages.deploy_success_question").format(branch=branch))
+            dlg.setIcon(QMessageBox.Question)
+            btn_yes = dlg.addButton(lang_mgr.get_text("buttons.yes"), QMessageBox.YesRole)
+            btn_no  = dlg.addButton(lang_mgr.get_text("buttons.no"),  QMessageBox.NoRole)
+            dlg.setDefaultButton(btn_no)
+            dlg.exec_()
+
+            if dlg.clickedButton() == btn_yes:
                 clean_url = self.repo_url.text().strip().replace('.git', '')
                 webbrowser.open(clean_url)
         else:
             self.status_label.setText(lang_mgr.get_text("status.failed"))
-            self._show_error(lang_mgr.get_text("errors.deploy_failed"), message)
+            self._show_error(lang_mgr.get_text("errors.deploy_failed"), branch_or_err)
 
     def closeEvent(self, event):
         if hasattr(self, 'save_token_check') and self.save_token_check.isChecked():

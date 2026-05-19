@@ -122,13 +122,10 @@ class DeployThread(QThread):
             
             # ── Обработка результата ──────────────────────────────────
             if success:
-                branch_upper = self.branch.upper()
-                # 🔒 Безопасная замена вместо .format() (не упадёт, если в конфиге нет {branch})
-                success_msg = lang_mgr.get_text("messages.deploy_success").replace("{branch}", branch_upper).replace("{0}", branch_upper)
-                self.log(success_msg, 'success')
-                
-                finish_msg = lang_mgr.get_text("messages.deploy_success_message").replace("{branch}", self.branch).replace("{0}", self.branch)
-                self.finished_signal.emit(True, finish_msg)
+                # Логируем успех в лог-панель
+                self.log(lang_mgr.get_text("messages.deploy_success").format(branch=self.branch.upper()), 'success')
+                # Передаём только имя ветки — main_window сам сформирует финальное сообщение
+                self.finished_signal.emit(True, self.branch)
             else:
                 if "rejected" in err.lower():
                     if "GH013" in err or "secret" in err.lower():
