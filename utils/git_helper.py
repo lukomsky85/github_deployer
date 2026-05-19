@@ -3,6 +3,30 @@ import os
 import subprocess
 import re
 
+def _is_git_info_line(line: str) -> bool:
+    """Строки которые git пишет в stderr при успехе — не ошибки."""
+    line_l = line.lower()
+    prefixes = ('to ', 'from ', 'remote:', '   ', ' * ', '-> ', 'hint:',
+                'branch', 'counting', 'compressing', 'writing', 'delta',
+                'resolving', 'enumerating', 'total ', 'pack-objects')
+    return any(line_l.startswith(p) for p in prefixes) or 'set up to track' in line_l
+
+
+def _is_git_noise(line: str) -> bool:
+    """Строки которые не нужно показывать даже при успехе."""
+    line_l = line.lower()
+    return (
+        line_l.startswith('hint:') or
+        line_l.startswith('counting') or
+        line_l.startswith('compressing') or
+        line_l.startswith('writing') or
+        line_l.startswith('delta') or
+        line_l.startswith('resolving') or
+        line_l.startswith('enumerating') or
+        line_l.startswith('total ')
+    )
+
+
 class GitHelper:
     @staticmethod
     def is_git_installed():
@@ -20,9 +44,9 @@ class GitHelper:
     def run_cmd(args, path, callback=None, extra_env=None):
         try:
             env = os.environ.copy()
-            if extra_env: 
+            if extra_env:
                 env.update(extra_env)
-            
+
             process = subprocess.Popen(
                 ['git'] + args,
                 cwd=path,
@@ -33,29 +57,38 @@ class GitHelper:
                 encoding='utf-8',
                 errors='replace'
             )
-            
-            output_lines = []
-            for line in process.stdout:
+
+            stdout, stderr = process.communicate()
+
+            # stdout — всегда в лог
+            for line in stdout.splitlines():
                 clean = re.sub(r'\x1B\[[0-?]*[ -/]*[@-~]', '', line).strip()
-                if clean and callback: 
+                if clean and callback:
                     callback(clean)
-                output_lines.append(clean)
-            
-            stderr = process.stderr.read()
-            if stderr and callback:
-                callback(f"ERROR: {stderr.strip()}")
-            
-            process.wait()
-            
+
+            # stderr — git пишет туда как ошибки, так и просто инфо (прогресс, remote-ответ)
+            # Показываем только если команда провалилась ИЛИ строка реально выглядит как ошибка
+            for line in stderr.splitlines():
+                clean = re.sub(r'\x1B\[[0-?]*[ -/]*[@-~]', '', line).strip()
+                if not clean:
+                    continue
+                is_real_error = (
+                    process.returncode != 0 and
+                    not _is_git_info_line(clean)
+                )
+                if is_real_error and callback:
+                    callback(clean)
+                elif process.returncode == 0 and callback:
+                    # При успехе показываем только полезные инфо-строки без префикса ERROR
+                    if not _is_git_noise(clean):
+                        callback(clean)
+
             if process.returncode != 0:
-                error_msg = stderr.strip() or "Unknown git error"
-                if callback:
-                    callback(f"❌ Git command failed: {error_msg}")
-                return False, error_msg
-                
+                return False, stderr.strip()
+
             return True, ""
         except Exception as e:
-            if callback: 
+            if callback:
                 callback(f"Error: {str(e)}")
             return False, str(e)
 
