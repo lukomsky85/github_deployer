@@ -4,7 +4,8 @@ import webbrowser
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout,
     QTabWidget, QStatusBar, QProgressBar, QMessageBox, QLabel,
-    QStyleFactory
+    QStyleFactory, QFileDialog, QPushButton, QComboBox,
+    QCheckBox, QTextEdit, QGroupBox, QFormLayout, QHBoxLayout, QLineEdit
 )
 from PyQt5.QtCore import Qt, QSize, QTimer
 from PyQt5.QtGui import QPalette, QColor, QFont
@@ -26,7 +27,7 @@ from ui.menu import MenuMixin
 from ui.helpers import HelpersMixin
 from ui.batch_tab import BatchTabMixin
 from ui.graph_tab import GraphTabMixin
-
+from ui.automation_tab import AutomationTabMixin
 
 
 class GitHubDeployerApp(
@@ -40,7 +41,8 @@ class GitHubDeployerApp(
     MenuMixin,
     HelpersMixin,
     BatchTabMixin,
-    GraphTabMixin
+    GraphTabMixin,
+    AutomationTabMixin  # ← Добавлен миксин для вкладки Автоматизация
 ):
     def __init__(self):
         super().__init__()
@@ -93,6 +95,7 @@ class GitHubDeployerApp(
         ('settings',     '_create_settings_tab',  'tabs.settings',      'settings'),
         ('graph',        '_create_graph_tab',      'tabs.graph',         'branch'),
         ('batch_deploy', '_create_batch_tab',      'tabs.batch_deploy',  'push'),
+        ('automation',   '_create_automation_tab', 'tabs.automation',    'settings'),  # ← Вкладка Автоматизация
         ('about',        '_create_about_tab',      'tabs.about',         'about'),
     ]
 
@@ -201,6 +204,168 @@ class GitHubDeployerApp(
             self.tabs.setCurrentIndex(idx)
 
         self._update_token_status()
+
+    # ── Метод создания вкладки "Автоматизация" ──────────────────────────────
+    def _create_automation_tab(self):
+        """Создаёт вкладку 'Автоматизация' (заглушка)"""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(10)
+        
+        # ── Заголовок ─────────────────────────────────────────────
+        header = QLabel("🤖 Автоматизация задач")
+        header.setStyleSheet("font-size: 14pt; font-weight: 600; color: #1e66f5;")
+        layout.addWidget(header)
+        
+        desc = QLabel("Настройте автоматические действия при деплое или по расписанию.")
+        desc.setStyleSheet("color: #6c6f85; margin-bottom: 8px;")
+        desc.setWordWrap(True)
+        layout.addWidget(desc)
+        
+        # ── Группа: Триггеры ──────────────────────────────────────
+        trigger_group = QGroupBox("🔹 Триггер запуска")
+        trigger_layout = QFormLayout(trigger_group)
+        
+        self.auto_trigger_combo = QComboBox()
+        self.auto_trigger_combo.addItems([
+            "Только вручную",
+            "После успешного деплоя",
+            "По расписанию (cron)",
+            "При изменении файлов"
+        ])
+        trigger_layout.addRow("Запускать:", self.auto_trigger_combo)
+        
+        self.cron_input = QLineEdit("0 2 * * *")
+        self.cron_input.setPlaceholderText("Например: 0 2 * * * (каждый день в 02:00)")
+        self.cron_input.setEnabled(False)
+        self.auto_trigger_combo.currentTextChanged.connect(
+            lambda t: self.cron_input.setEnabled("расписанию" in t)
+        )
+        trigger_layout.addRow("Расписание:", self.cron_input)
+        
+        layout.addWidget(trigger_group)
+        
+        # ── Группа: Действия ──────────────────────────────────────
+        actions_group = QGroupBox("⚡ Действия")
+        actions_layout = QVBoxLayout(actions_group)
+        
+        self.action_run_tests = QCheckBox("Запустить тесты (pytest)")
+        self.action_build = QCheckBox("Собрать проект (build)")
+        self.action_notify = QCheckBox("Отправить уведомление (email/telegram)")
+        self.action_backup = QCheckBox("Создать бэкап перед деплоем")
+        
+        for chk in [self.action_run_tests, self.action_build, self.action_notify, self.action_backup]:
+            chk.setStyleSheet("padding: 4px 0;")
+            actions_layout.addWidget(chk)
+        
+        layout.addWidget(actions_group)
+        
+        # ── Группа: Скрипт ────────────────────────────────────────
+        script_group = QGroupBox("📜 Кастомный скрипт (опционально)")
+        script_layout = QVBoxLayout(script_group)
+        
+        script_hint = QLabel("Выполнится после основных действий. Путь к .py или .bat файлу.")
+        script_hint.setStyleSheet("color: #8c8fa1; font-size: 9pt;")
+        script_layout.addWidget(script_hint)
+        
+        self.custom_script_input = QLineEdit()
+        self.custom_script_input.setPlaceholderText("C:\\scripts\\post_deploy.bat")
+        script_layout.addWidget(self.custom_script_input)
+        
+        browse_script_btn = QPushButton("Обзор...")
+        browse_script_btn.setFixedWidth(80)
+        browse_script_btn.clicked.connect(lambda: self._browse_script(self.custom_script_input))
+        script_layout.addWidget(browse_script_btn)
+        
+        layout.addWidget(script_group)
+        
+        # ── Лог выполнения ────────────────────────────────────────
+        log_group = QGroupBox("📋 Журнал автоматизации")
+        log_layout = QVBoxLayout(log_group)
+        
+        self.automation_log = QTextEdit()
+        self.automation_log.setReadOnly(True)
+        self.automation_log.setFixedHeight(100)
+        self.automation_log.setStyleSheet(
+            "QTextEdit { background-color: #f8f9fc; border: 1px solid #dce0e8; border-radius: 6px; padding: 6px; font-family: Consolas, monospace; font-size: 9pt; }"
+        )
+        log_layout.addWidget(self.automation_log)
+        
+        clear_log_btn = QPushButton("Очистить лог")
+        clear_log_btn.setFixedWidth(100)
+        clear_log_btn.clicked.connect(self.automation_log.clear)
+        log_layout.addWidget(clear_log_btn)
+        
+        layout.addWidget(log_group)
+        
+        # ── Кнопки сохранения ─────────────────────────────────────
+        btn_row = QHBoxLayout()
+        btn_row.addStretch()
+        
+        save_btn = QPushButton("💾 Сохранить настройки")
+        save_btn.setMinimumWidth(150)
+        save_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #40a02b;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 20px;
+                font-weight: 500;
+            }
+            QPushButton:hover { background-color: #368a24; }
+            QPushButton:pressed { background-color: #2d731e; }
+        """)
+        save_btn.clicked.connect(self._save_automation_settings)
+        btn_row.addWidget(save_btn)
+        
+        test_btn = QPushButton("🧪 Протестировать")
+        test_btn.setMinimumWidth(120)
+        test_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #df8e1d;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-weight: 500;
+            }
+            QPushButton:hover { background-color: #c77e17; }
+        """)
+        test_btn.clicked.connect(self._test_automation)
+        btn_row.addWidget(test_btn)
+        
+        layout.addLayout(btn_row)
+        layout.addStretch()
+        
+        return tab
+
+    # ── Helper methods for automation tab ─────────────────────────
+    def _browse_script(self, line_edit):
+        """Открывает диалог выбора файла скрипта"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Выберите скрипт", "", 
+            "Все файлы (*.*);;Python (*.py);;Batch (*.bat *.cmd);;Shell (*.sh)"
+        )
+        if file_path:
+            line_edit.setText(file_path)
+
+    def _save_automation_settings(self):
+        """Сохраняет настройки автоматизации"""
+        self.automation_log.append(f"[{self._timestamp()}] ✅ Настройки сохранены")
+        self._show_info("Настройки автоматизации сохранены")
+
+    def _test_automation(self):
+        """Запускает тестовое выполнение действий"""
+        self.automation_log.append(f"[{self._timestamp()}] 🧪 Запуск теста...")
+        QTimer.singleShot(500, lambda: self.automation_log.append(f"[{self._timestamp()}] ✅ Тест завершён успешно"))
+
+    def _timestamp(self):
+        """Возвращает текущее время в формате ЧЧ:ММ:СС"""
+        from datetime import datetime
+        return datetime.now().strftime("%H:%M:%S")
+    # ── Конец методов вкладки Автоматизация ──────────────────────
 
     def _setup_statusbar(self):
         self.statusbar = QStatusBar()

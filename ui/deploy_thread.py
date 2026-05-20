@@ -12,7 +12,7 @@ class DeployThread(QThread):
     log_signal = pyqtSignal(str, str)
     finished_signal = pyqtSignal(bool, str)
     
-    def __init__(self, path, repo, token, message, do_gitignore, branch, create_branch, do_pull=False):
+    def __init__(self, path, repo, token, message, do_gitignore, branch, create_branch, do_pull=False, hooks=None):
         super().__init__()
         self.path = path
         self.repo = repo
@@ -22,6 +22,7 @@ class DeployThread(QThread):
         self.branch = branch
         self.create_branch = create_branch
         self.do_pull = do_pull
+        self.hooks = hooks or []
     
     def log(self, msg, level='info'):
         self.log_signal.emit(msg, level)
@@ -124,7 +125,12 @@ class DeployThread(QThread):
             if success:
                 # Логируем успех в лог-панель
                 self.log(lang_mgr.get_text("messages.deploy_success").format(branch=self.branch.upper()), 'success')
-                # Передаём только имя ветки — main_window сам сформирует финальное сообщение
+                # Post-deploy хуки
+                if self.hooks:
+                    from utils.hooks import HooksManager
+                    self.log("Running post-deploy hooks...", 'info')
+                    HooksManager.run_hooks(self.hooks, 'post', self.path,
+                        callback=lambda m, l='info': self.log_signal.emit(m, l))
                 self.finished_signal.emit(True, self.branch)
             else:
                 if "rejected" in err.lower():
