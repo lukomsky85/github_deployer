@@ -34,12 +34,12 @@ class BranchesTabMixin:
         project_layout.addWidget(self.branch_path)
 
         browse_btn = QPushButton(lang_mgr.get_text("branches_tab.browse_button"))
-        browse_btn.setFixedWidth(80)
+        browse_btn.setMinimumWidth(90)
         browse_btn.clicked.connect(lambda: self._browse_folder(self.branch_path))
         project_layout.addWidget(browse_btn)
 
         load_btn = QPushButton(lang_mgr.get_text("branches_tab.load_button"))
-        load_btn.setFixedWidth(110)
+        load_btn.setMinimumWidth(130)
         load_btn.setStyleSheet(
             "QPushButton { background-color: #e8f0fe; color: #1e66f5; border-color: #b8d0fb; }"
             "QPushButton:hover { background-color: #d0e4fd; }"

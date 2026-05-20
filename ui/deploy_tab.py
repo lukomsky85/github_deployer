@@ -50,7 +50,7 @@ class DeployTabMixin:
 
         # Кнопка "Добавить" с иконкой
         btn_add = QPushButton(" " + ("Добавить" if lang_mgr.current_lang == 'ru' else "Add"))
-        btn_add.setFixedWidth(100)
+        btn_add.setMinimumWidth(110)
         btn_add.setToolTip(lang_mgr.get_text("deploy_tab.add_profile_tooltip"))
         self.icons.set_button_icon(btn_add, 'add', size=QSize(16, 16))
         btn_add.clicked.connect(self._add_repo)
@@ -58,7 +58,7 @@ class DeployTabMixin:
 
         # Кнопка "Изменить" с иконкой
         btn_edit = QPushButton(" " + ("Изменить" if lang_mgr.current_lang == 'ru' else "Edit"))
-        btn_edit.setFixedWidth(90)
+        btn_edit.setMinimumWidth(100)
         btn_edit.setToolTip(lang_mgr.get_text("deploy_tab.edit_profile_tooltip"))
         self.icons.set_button_icon(btn_edit, 'edit', size=QSize(16, 16))
         btn_edit.clicked.connect(self._edit_repo)
@@ -66,7 +66,7 @@ class DeployTabMixin:
 
         # Кнопка "Удалить" с иконкой
         btn_del = QPushButton(" " + ("Удалить" if lang_mgr.current_lang == 'ru' else "Delete"))
-        btn_del.setFixedWidth(90)
+        btn_del.setMinimumWidth(100)
         btn_del.setToolTip(lang_mgr.get_text("deploy_tab.delete_profile_tooltip"))
         btn_del.setStyleSheet("QPushButton { color: #d20f39; } QPushButton:hover { color: #d20f39; border-color: #d20f39; }")
         self.icons.set_danger_button_icon(btn_del, 'delete', size=QSize(16, 16))
@@ -75,12 +75,12 @@ class DeployTabMixin:
 
         # Кнопка "Сохранить профиль" с иконкой
         self.btn_save_profile = QPushButton(" " + ("Сохранить профиль" if lang_mgr.current_lang == 'ru' else "Save Profile"))
-        self.btn_save_profile.setFixedWidth(150)
+        self.btn_save_profile.setMinimumWidth(160)
         self.btn_save_profile.setStyleSheet(
             "QPushButton { background-color: #e8f0fe; color: #1e66f5; border-color: #b8d0fb; }"
             "QPushButton:hover { background-color: #d0e4fd; }"
         )
-        self.icons.set_primary_button_icon(self.btn_save_profile, 'save', size=QSize(16, 16))
+        self.icons.set_button_icon(self.btn_save_profile, 'save', color='#1e66f5', size=QSize(16, 16))
         self.btn_save_profile.clicked.connect(self._save_current_profile)
         pg_layout.addWidget(self.btn_save_profile)
 
@@ -260,14 +260,14 @@ class DeployTabMixin:
         
         # Кнопка "Очистить лог" с иконкой
         clear_btn = QPushButton(" " + lang_mgr.get_text("deploy_tab.clear_log_button"))
-        clear_btn.setFixedWidth(120)
+        clear_btn.setMinimumWidth(120)
         self.icons.set_danger_button_icon(clear_btn, 'clear', size=QSize(16, 16))
         clear_btn.clicked.connect(self._clear_log)
         log_btns.addWidget(clear_btn)
         
         # Кнопка "Сохранить лог" с иконкой
         save_log_btn = QPushButton(" " + lang_mgr.get_text("deploy_tab.save_log_button"))
-        save_log_btn.setFixedWidth(120)
+        save_log_btn.setMinimumWidth(130)
         self.icons.set_button_icon(save_log_btn, 'save', size=QSize(16, 16))
         save_log_btn.clicked.connect(self._save_log)
         log_btns.addWidget(save_log_btn)

@@ -65,7 +65,7 @@ class CommitDetailPanel(QWidget):
         sha_row.addWidget(self._sha_label)
 
         self._copy_btn = QPushButton(lang_mgr.get_text("graph_tab.copy_sha"))
-        self._copy_btn.setFixedWidth(80)
+        self._copy_btn.setMinimumWidth(120)
         self._copy_btn.setStyleSheet("font-size: 8.5pt; padding: 3px 8px;")
         self._copy_btn.clicked.connect(self._copy_sha)
         sha_row.addWidget(self._copy_btn)
@@ -206,14 +206,14 @@ class GraphTabMixin:
         path_row.addWidget(self._graph_path_input)
 
         browse_btn = QPushButton(lang_mgr.get_text("graph_tab.browse"))
-        browse_btn.setFixedWidth(80)
+        browse_btn.setMinimumWidth(90)
         icons.set_button_icon(browse_btn, 'folder', size=QSize(14, 14))
         browse_btn.clicked.connect(lambda: self._browse_folder(self._graph_path_input))
         path_row.addWidget(browse_btn)
 
         # Кнопка синхронизации пути из Deploy
         sync_btn = QPushButton(lang_mgr.get_text("graph_tab.sync_path"))
-        sync_btn.setFixedWidth(120)
+        sync_btn.setMinimumWidth(160)
         sync_btn.setStyleSheet(
             "QPushButton { background:#f0f4ff; color:#1e66f5; border:1px solid #b8d0fb; border-radius:7px; padding:6px 10px; }"
             "QPushButton:hover { background:#dbeafe; }"
@@ -246,7 +246,7 @@ class GraphTabMixin:
         opts_row.addStretch()
 
         self._graph_refresh_btn = QPushButton(lang_mgr.get_text("graph_tab.refresh"))
-        self._graph_refresh_btn.setMinimumWidth(110)
+        self._graph_refresh_btn.setMinimumWidth(150)
         self._graph_refresh_btn.setStyleSheet(
             "QPushButton { background:#1e66f5; color:#fff; border:none; border-radius:7px;"
             " padding:7px 18px; font-weight:600; }"
