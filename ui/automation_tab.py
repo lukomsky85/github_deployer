@@ -180,6 +180,13 @@ class AutomationTabMixin:
 
         # Заголовок хуков
         hdr = QHBoxLayout()
+        # Иконка + заголовок
+        hdr_icon = QLabel()
+        _icon = icons.get('settings', color='#1e66f5', size=QSize(20, 20))
+        if _icon:
+            hdr_icon.setPixmap(_icon.pixmap(QSize(20, 20)))
+        hdr.addWidget(hdr_icon)
+
         hdr_lbl = QLabel(lang_mgr.get_text("automation.hooks_title"))
         hdr_lbl.setStyleSheet("font-size: 12pt; font-weight: 700; color: #4c4f69;")
         hdr.addWidget(hdr_lbl)
@@ -224,6 +231,7 @@ class AutomationTabMixin:
             " border-radius:7px; padding:6px 12px; }"
             "QPushButton:hover { background:#dcfce7; }"
         )
+        icons.set_button_icon(btn_run_pre, 'deploy', color='#40a02b', size=QSize(14, 14))
         btn_run_pre.clicked.connect(lambda: self._run_hooks_now('pre'))
         hook_btns.addWidget(btn_run_pre)
 
@@ -233,6 +241,7 @@ class AutomationTabMixin:
             " border-radius:7px; padding:6px 12px; }"
             "QPushButton:hover { background:#dcfce7; }"
         )
+        icons.set_button_icon(btn_run_post, 'push', color='#40a02b', size=QSize(14, 14))
         btn_run_post.clicked.connect(lambda: self._run_hooks_now('post'))
         hook_btns.addWidget(btn_run_post)
 
@@ -282,6 +291,13 @@ class AutomationTabMixin:
 
         # Заголовок расписания
         shdr = QHBoxLayout()
+        # Иконка + заголовок расписания
+        shdr_icon = QLabel()
+        _sicon = icons.get('refresh', color='#40a02b', size=QSize(20, 20))
+        if _sicon:
+            shdr_icon.setPixmap(_sicon.pixmap(QSize(20, 20)))
+        shdr.addWidget(shdr_icon)
+
         shdr_lbl = QLabel(lang_mgr.get_text("automation.schedule_title"))
         shdr_lbl.setStyleSheet("font-size: 12pt; font-weight: 700; color: #4c4f69;")
         shdr.addWidget(shdr_lbl)

@@ -72,7 +72,8 @@
         "add_profile_tooltip": "Add new repository profile",
         "edit_profile_tooltip": "Edit selected profile",
         "delete_profile_tooltip": "Delete selected profile",
-        "add_commit_tooltip": "Add custom commit message"
+        "add_commit_tooltip": "Add custom commit message",
+        "save_profile_button": "Save Profile"
     },
     "branches_tab": {
         "project_group": "Select Project",
@@ -266,7 +267,9 @@
         "delete": "Delete",
         "create": "Create",
         "switch": "Switch",
-        "merge": "Merge"
+        "merge": "Merge",
+        "add": "Add",
+        "edit": "Edit"
     },
     "batch_deploy": {
         "title": "Batch Deploy",
