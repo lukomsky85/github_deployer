@@ -205,7 +205,12 @@ QGroupBox::title {
     font-weight: 600;
 }
 
-QCheckBox { spacing: 8px; color: #4c4f69; font-size: 10pt; }
+QCheckBox {
+    spacing: 8px;
+    color: #4c4f69;
+    font-size: 10pt;
+    background: transparent;
+}
 QCheckBox::indicator {
     width: 18px;
     height: 18px;
@@ -217,6 +222,22 @@ QCheckBox::indicator:hover { border-color: #1e66f5; }
 QCheckBox::indicator:checked {
     background-color: #1e66f5;
     border-color: #1e66f5;
+}
+
+QGroupBox QWidget {
+    background: transparent;
+}
+QGroupBox QCheckBox {
+    background: transparent;
+}
+QGroupBox QLabel {
+    background: transparent;
+}
+QGroupBox QRadioButton {
+    background: transparent;
+}
+QScrollArea QWidget {
+    background: transparent;
 }
 
 QScrollBar:vertical {
@@ -284,7 +305,7 @@ QProgressBar::chunk {
 
 QScrollArea { background: transparent; border: none; }
 QScrollArea > QWidget > QWidget { background: transparent; }
-QLabel { color: #4c4f69; }
+QLabel { color: #4c4f69; background: transparent; }
 """
 
 # 📁 Default Gitignore Template (Updated & Secure)

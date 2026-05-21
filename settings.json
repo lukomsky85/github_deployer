@@ -1,5 +1,5 @@
 {
-    "language": "ru",
+    "language": "en",
     "default_path": "E:\\github_deployer\\project",
     "default_repo": "https://github.com/lukomsky85/github_deployer.git",
     "last_branch": "main"
