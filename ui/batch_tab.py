@@ -3,7 +3,7 @@ import os
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QGroupBox, QCheckBox, QTextEdit, QProgressBar, QFrame,
-    QScrollArea, QSizePolicy, QComboBox, QLineEdit, QSplitter
+    QScrollArea, QSizePolicy, QComboBox, QLineEdit, QSplitter, QFrame
 )
 from PyQt5.QtCore import Qt, QSize, QThread, pyqtSignal
 from PyQt5.QtGui import QFont, QColor
@@ -355,8 +355,10 @@ class BatchTabMixin:
         scroll.setWidget(self._batch_cards_widget)
         left_lay.addWidget(scroll, 1)
 
-        # Select all / Deselect all
-        sel_row = QHBoxLayout()
+        # Select all / Deselect all — вне скролла, всегда видны
+        sel_panel = QWidget()
+        sel_row = QHBoxLayout(sel_panel)
+        sel_row.setContentsMargins(0, 4, 0, 0)
         btn_sel_all = QPushButton(lang_mgr.get_text("batch_deploy.select_all"))
         btn_sel_all.clicked.connect(lambda: self._batch_toggle_all(True))
         sel_row.addWidget(btn_sel_all)
@@ -364,16 +366,29 @@ class BatchTabMixin:
         btn_desel_all.clicked.connect(lambda: self._batch_toggle_all(False))
         sel_row.addWidget(btn_desel_all)
         sel_row.addStretch()
-        left_lay.addLayout(sel_row)
+        left_lay.addWidget(sel_panel)
 
         splitter.addWidget(left)
 
         # ══ ПРАВАЯ ПАНЕЛЬ — настройки и лог ════════════════════════════
         right = QWidget()
         right.setMinimumWidth(380)
-        right_lay = QVBoxLayout(right)
-        right_lay.setContentsMargins(6, 12, 12, 12)
+        right_outer = QVBoxLayout(right)
+        right_outer.setContentsMargins(0, 0, 0, 0)
+        right_outer.setSpacing(0)
+
+        # Прокручиваемая область для настроек
+        right_scroll = QScrollArea()
+        right_scroll.setWidgetResizable(True)
+        right_scroll.setFrameShape(QFrame.NoFrame)
+        right_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        right_content = QWidget()
+        right_lay = QVBoxLayout(right_content)
+        right_lay.setContentsMargins(6, 12, 12, 8)
         right_lay.setSpacing(10)
+        right_scroll.setWidget(right_content)
+        right_outer.addWidget(right_scroll, 1)
 
         # Общие параметры деплоя
         params_group = QGroupBox(lang_mgr.get_text("batch_deploy.deploy_params"))
@@ -505,7 +520,14 @@ class BatchTabMixin:
         """)
         icons.set_primary_button_icon(self._batch_deploy_btn, 'deploy', size=QSize(18, 18))
         self._batch_deploy_btn.clicked.connect(self._batch_start)
-        right_lay.addWidget(self._batch_deploy_btn)
+        right_lay.addStretch()
+
+        # Кнопки вне скролла — всегда видны
+        btn_panel = QWidget()
+        btn_panel_lay = QVBoxLayout(btn_panel)
+        btn_panel_lay.setContentsMargins(6, 6, 12, 12)
+        btn_panel_lay.setSpacing(6)
+        btn_panel_lay.addWidget(self._batch_deploy_btn)
 
         self._batch_stop_btn = QPushButton(lang_mgr.get_text("batch_deploy.stop_button"))
         self._batch_stop_btn.setMinimumHeight(36)
@@ -517,7 +539,8 @@ class BatchTabMixin:
         )
         icons.set_danger_button_icon(self._batch_stop_btn, 'clear', size=QSize(14, 14))
         self._batch_stop_btn.clicked.connect(self._batch_stop)
-        right_lay.addWidget(self._batch_stop_btn)
+        btn_panel_lay.addWidget(self._batch_stop_btn)
+        right_outer.addWidget(btn_panel)
 
         splitter.addWidget(right)
         splitter.setSizes([420, 460])
