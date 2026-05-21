@@ -66,7 +66,13 @@ class CommitDetailPanel(QWidget):
 
         self._copy_btn = QPushButton(lang_mgr.get_text("graph_tab.copy_sha"))
         self._copy_btn.setMinimumWidth(120)
-        self._copy_btn.setStyleSheet("font-size: 8.5pt; padding: 3px 8px;")
+        self._copy_btn.setStyleSheet(
+            "QPushButton { background:#e8f0fe; color:#1e66f5; border:1px solid #b8d0fb;"
+            " border-radius:7px; padding:5px 12px; font-size:9pt; }"
+            "QPushButton:hover { background:#d0e4fd; }"
+        )
+        from utils.icon_manager import IconManager as _IM
+        _IM().set_button_icon(self._copy_btn, 'save', color='#1e66f5', size=QSize(14, 14))
         self._copy_btn.clicked.connect(self._copy_sha)
         sha_row.addWidget(self._copy_btn)
         sha_row.addStretch()
@@ -232,7 +238,14 @@ class GraphTabMixin:
         self._graph_max_spin.setRange(10, 2000)
         self._graph_max_spin.setValue(100)
         self._graph_max_spin.setSingleStep(50)
-        self._graph_max_spin.setFixedWidth(80)
+        self._graph_max_spin.setFixedWidth(90)
+        self._graph_max_spin.setFixedHeight(34)
+        self._graph_max_spin.setStyleSheet(
+            "QSpinBox { background:#fff; border:1.5px solid #ccd0da; border-radius:7px;"
+            " padding:4px 8px; color:#4c4f69; }"
+            "QSpinBox:focus { border-color:#1e66f5; }"
+            "QSpinBox::up-button, QSpinBox::down-button { width:18px; border-radius:4px; }"
+        )
         opts_row.addWidget(self._graph_max_spin)
 
         opts_row.addSpacing(16)

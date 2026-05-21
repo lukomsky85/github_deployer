@@ -14,6 +14,16 @@ class MenuMixin:
         """Строит меню с нуля. Вызывается при старте и при смене языка."""
         self._icons = IconManager()
         menubar = self.menuBar()
+        menubar.setStyleSheet("""
+            QMenuBar { padding: 2px 4px; spacing: 2px; }
+            QMenuBar::item { padding: 6px 16px; border-radius: 5px; }
+            QMenuBar::item:selected { background:#dce0e8; color:#1e66f5; }
+            QMenu { padding: 4px; border-radius: 8px; }
+            QMenu::item { padding: 7px 32px 7px 12px; border-radius: 5px; min-width: 160px; }
+            QMenu::item:selected { background:#e8f0fe; color:#1e66f5; }
+            QMenu::icon { padding-left: 8px; }
+            QMenu::separator { height:1px; background:#e6e9ef; margin:4px 8px; }
+        """)
         menubar.clear()
 
         def _act(text_key, icon_name=None, shortcut=None):

@@ -306,6 +306,41 @@ QProgressBar::chunk {
 QScrollArea { background: transparent; border: none; }
 QScrollArea > QWidget > QWidget { background: transparent; }
 QLabel { color: #4c4f69; background: transparent; }
+
+QSpinBox {
+    background-color: #ffffff;
+    color: #4c4f69;
+    border: 1.5px solid #ccd0da;
+    border-radius: 7px;
+    padding: 5px 8px;
+    selection-background-color: #1e66f5;
+}
+QSpinBox:focus {
+    border-color: #1e66f5;
+}
+QSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left: 1px solid #ccd0da;
+    border-bottom: 1px solid #ccd0da;
+    border-top-right-radius: 6px;
+    background: #e6e9ef;
+}
+QSpinBox::up-button:hover { background: #dce0e8; }
+QSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 20px;
+    border-left: 1px solid #ccd0da;
+    border-top: 1px solid #ccd0da;
+    border-bottom-right-radius: 6px;
+    background: #e6e9ef;
+}
+QSpinBox::down-button:hover { background: #dce0e8; }
+QSpinBox::up-arrow  { width: 8px; height: 8px; }
+QSpinBox::down-arrow { width: 8px; height: 8px; }
+
 """
 
 # 📁 Default Gitignore Template (Updated & Secure)

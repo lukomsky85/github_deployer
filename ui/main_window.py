@@ -321,7 +321,388 @@ class GitHubDeployerApp(
                 json.dump(data, f, ensure_ascii=False, indent=4)
         except Exception as e:
             print(f"[main_window] Failed to save app state: {e}")
+            
+    def _clear_history(self):
+        """Очистка истории коммитов и деплоев"""
+        if not self.commit_history:
+            QMessageBox.information(
+                self,
+                lang_mgr.get_text("messages.info"),
+                "История уже пуста"
+            )
+            return
+        
+        reply = QMessageBox.question(
+            self,
+            "Очистка истории",
+            "Вы уверены, что хотите очистить всю историю коммитов?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            self.commit_history = []
+            CommitHistoryManager.save_history(self.commit_history)
+            
+            if hasattr(self, 'commit_combo'):
+                self.commit_combo.clear()
+                self.commit_combo.addItem("")
+            
+            self.status_label.setText("История очищена")
+            
+            QMessageBox.information(
+                self,
+                lang_mgr.get_text("messages.success"),
+                "История успешно очищена"
+            )
 
+    def _export_history(self):
+        """Экспорт истории коммитов в файл"""
+        from PyQt5.QtWidgets import QFileDialog
+        import json
+        from datetime import datetime
+        
+        if not self.commit_history:
+            QMessageBox.warning(
+                self,
+                "Экспорт истории",
+                "Нет истории для экспорта"
+            )
+            return
+        
+        # Диалог выбора файла
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Сохранить историю",
+            f"deploy_history_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+            "JSON files (*.json);;All files (*.*)"
+        )
+        
+        if file_path:
+            try:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    json.dump(self.commit_history, f, ensure_ascii=False, indent=2)
+                
+                QMessageBox.information(
+                    self,
+                    "Экспорт завершён",
+                    f"История успешно экспортирована в:\n{file_path}"
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Ошибка экспорта",
+                    f"Не удалось экспортировать историю:\n{str(e)}"
+                )
+    
+    def _import_history(self):
+        """Импорт истории коммитов из файла"""
+        from PyQt5.QtWidgets import QFileDialog
+        import json
+        
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Загрузить историю",
+            "",
+            "JSON files (*.json);;All files (*.*)"
+        )
+        
+        if file_path:
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    imported_history = json.load(f)
+                
+                if not isinstance(imported_history, list):
+                    raise ValueError("Файл должен содержать список коммитов")
+                
+                reply = QMessageBox.question(
+                    self,
+                    "Импорт истории",
+                    f"Найдено {len(imported_history)} записей.\n"
+                    f"Заменить текущую историю (будет потеряна) или добавить?\n\n"
+                    f"Нажмите Yes - заменить\n"
+                    f"Нажмите No - добавить",
+                    QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
+                )
+                
+                if reply == QMessageBox.Yes:
+                    self.commit_history = imported_history
+                elif reply == QMessageBox.No:
+                    self.commit_history.extend(imported_history)
+                else:
+                    return
+                
+                CommitHistoryManager.save_history(self.commit_history)
+                
+                # Обновляем комбобокс с коммитами
+                if hasattr(self, 'commit_combo'):
+                    self.commit_combo.clear()
+                    self.commit_combo.addItem("")
+                    # Можно добавить последние коммиты в комбобокс
+                    for commit in self.commit_history[-10:]:  # последние 10
+                        if isinstance(commit, dict) and 'message' in commit:
+                            self.commit_combo.addItem(commit['message'])
+                
+                QMessageBox.information(
+                    self,
+                    "Импорт завершён",
+                    f"История успешно импортирована. Всего записей: {len(self.commit_history)}"
+                )
+                
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Ошибка импорта",
+                    f"Не удалось импортировать историю:\n{str(e)}"
+                )
+
+    def _reset_settings(self):
+        """Сброс всех настроек приложения к значениям по умолчанию"""
+        reply = QMessageBox.question(
+            self,
+            "Сброс настроек",
+            "Вы уверены, что хотите сбросить все настройки к значениям по умолчанию?\n\n"
+            "Будут удалены:\n"
+            "- Сохранённый токен\n"
+            "- История коммитов\n"
+            "- Путь к проекту\n"
+            "- URL репозитория\n"
+            "- Настройки языка",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            self.commit_history = []
+            CommitHistoryManager.save_history(self.commit_history)
+            
+            from utils.crypto import TokenManager
+            TokenManager.save_token("")
+            
+            if hasattr(self, 'path_input'):
+                self.path_input.setText("")
+            if hasattr(self, 'repo_url'):
+                self.repo_url.setText("https://github.com/username/repository.git")
+            if hasattr(self, 'token_input'):
+                self.token_input.setText("")
+            if hasattr(self, 'branch_combo'):
+                self.branch_combo.setCurrentText("main")
+            if hasattr(self, 'commit_combo'):
+                self.commit_combo.clear()
+                self.commit_combo.addItem("")
+            
+            if lang_mgr.current_lang != 'ru':
+                lang_mgr.set_language('ru')
+                self._rebuild_menu()
+                self._retranslate_tabs(self.tabs.currentIndex())
+            
+            self._update_token_status()
+            self._save_app_state()
+            
+            self.status_label.setText("Настройки сброшены к значениям по умолчанию")
+            
+            QMessageBox.information(
+                self,
+                lang_mgr.get_text("messages.success"),
+                "Все настройки успешно сброшены"
+            )
+
+    def _show_help(self):
+        """Показывает справку по использованию программы"""
+        help_text = """
+        <h3>GitHub Deployer - Руководство по использованию</h3>
+        
+        <b>Основные возможности:</b><br>
+        • Деплой проектов на GitHub<br>
+        • Управление ветками (создание, переключение, удаление, слияние)<br>
+        • Работа с .gitignore<br>
+        • Граф коммитов<br>
+        • Пакетный деплой<br>
+        • Автоматизация задач<br><br>
+        
+        <b>Как начать:</b><br>
+        1. Укажите путь к вашему проекту<br>
+        2. Введите URL репозитория GitHub<br>
+        3. Добавьте GitHub токен (Settings → Manage Token)<br>
+        4. Выберите ветку и нажмите "Deploy"<br><br>
+        
+        <b>Горячие клавиши:</b><br>
+        • Ctrl+O - Выбрать папку проекта<br>
+        • F5 - Запустить деплой<br>
+        • Ctrl+Q - Выйти из программы<br>
+        """
+        
+        QMessageBox.about(self, "Справка", help_text)
+
+    def _show_about(self):
+        """Показывает информацию о программе"""
+        about_text = """
+        <h3>GitHub Deployer</h3>
+        <b>Версия:</b> 1.1.0<br>
+        <b>Автор:</b> GitHub Deployer Team<br>
+        <b>Лицензия:</b> MIT<br><br>
+        
+        Программа для удобного деплоя проектов на GitHub<br>
+        с поддержкой множества дополнительных функций.<br><br>
+        
+        <b>Особенности:</b><br>
+        • Поддержка токенов GitHub<br>
+        • Управление ветками<br>
+        • Многоязычный интерфейс (Русский/English)<br>
+        • Автоматическая обработка .gitignore<br>
+        """
+        
+        QMessageBox.about(self, "О программе", about_text)
+
+    def _manage_token(self):
+        """Управление GitHub токеном"""
+        settings_index = self._tab_index_by_key('settings')
+        self.tabs.setCurrentIndex(settings_index)
+        
+        if hasattr(self, '_show_token_dialog'):
+            self._show_token_dialog()
+        else:
+            from utils.crypto import TokenManager
+            from PyQt5.QtWidgets import QInputDialog, QLineEdit
+            
+            current_token = TokenManager.load_token()
+            token, ok = QInputDialog.getText(
+                self,
+                "GitHub Токен",
+                "Введите ваш GitHub токен:",
+                QLineEdit.Password,
+                current_token
+            )
+            
+            if ok and token:
+                TokenManager.save_token(token)
+                if hasattr(self, 'token_input'):
+                    self.token_input.setText(token)
+                self._update_token_status()
+                QMessageBox.information(self, "Успех", "Токен успешно сохранён")
+            elif ok and not token:
+                TokenManager.save_token("")
+                if hasattr(self, 'token_input'):
+                    self.token_input.setText("")
+                self._update_token_status()
+                QMessageBox.information(self, "Токен удалён", "Токен был удалён")
+                
+    def _delete_token(self):
+        """Удаление сохранённого GitHub токена"""
+        from utils.crypto import TokenManager
+        
+        # Проверяем, есть ли сохранённый токен
+        current_token = TokenManager.load_token()
+        if not current_token:
+            QMessageBox.information(
+                self,
+                "Удаление токена",
+                "Нет сохранённого токена для удаления"
+            )
+            return
+        
+        reply = QMessageBox.question(
+            self,
+            "Удаление токена",
+            "Вы уверены, что хотите удалить сохранённый GitHub токен?\n\n"
+            "После удаления вам нужно будет вводить токен заново для деплоя.",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            TokenManager.save_token("")
+            if hasattr(self, 'token_input'):
+                self.token_input.setText("")
+            self._update_token_status()
+            self.status_label.setText("Токен удалён")
+            
+            QMessageBox.information(
+                self,
+                "Токен удалён",
+                "GitHub токен успешно удалён из хранилища"
+            )
+            
+    def _check_token(self):
+        """Проверка валидности GitHub токена"""
+        from utils.crypto import TokenManager
+        import requests
+        
+        token = TokenManager.load_token()
+        if not token:
+            # Если сохранённого нет, проверяем поле ввода
+            if hasattr(self, 'token_input'):
+                token = self.token_input.text().strip()
+            if not token:
+                QMessageBox.warning(
+                    self,
+                    "Проверка токена",
+                    "Токен не найден. Пожалуйста, введите токен сначала."
+                )
+                return
+        
+        # Проверяем токен через GitHub API
+        self.status_label.setText("Проверка токена...")
+        QApplication.processEvents()
+        
+        try:
+            headers = {
+                "Authorization": f"token {token}",
+                "Accept": "application/vnd.github.v3+json"
+            }
+            response = requests.get(
+                "https://api.github.com/user",
+                headers=headers,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                user_data = response.json()
+                username = user_data.get('login', 'Неизвестно')
+                
+                # Проверяем права токена
+                scopes = response.headers.get('X-OAuth-Scopes', 'не указаны')
+                
+                QMessageBox.information(
+                    self,
+                    "Токен валиден",
+                    f"✅ Токен действителен!\n\n"
+                    f"Пользователь: {username}\n"
+                    f"Права: {scopes}\n\n"
+                    f"Токен имеет доступ к репозиториям."
+                )
+                self.status_label.setText(f"Токен валиден (пользователь: {username})")
+            elif response.status_code == 401:
+                QMessageBox.critical(
+                    self,
+                    "Токен невалиден",
+                    "❌ Токен недействителен или истёк.\n\n"
+                    "Пожалуйста, проверьте токен и введите заново."
+                )
+                self.status_label.setText("Токен невалиден")
+            else:
+                QMessageBox.warning(
+                    self,
+                    "Ошибка проверки",
+                    f"Не удалось проверить токен.\n"
+                    f"Код ошибки: {response.status_code}\n"
+                    f"Ответ: {response.text[:200]}"
+                )
+                self.status_label.setText("Ошибка проверки токена")
+        except requests.exceptions.Timeout:
+            QMessageBox.warning(
+                self,
+                "Таймаут",
+                "Превышено время ожидания ответа от GitHub.\n"
+                "Проверьте интернет-соединение."
+            )
+            self.status_label.setText("Таймаут при проверке токена")
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Ошибка",
+                f"Произошла ошибка при проверке токена:\n{str(e)}"
+            )
+            self.status_label.setText("Ошибка проверки токена")
+       
+            
     def _load_app_state(self):
         """Загружает сохранённые настройки и применяет их к полям UI."""
         import json

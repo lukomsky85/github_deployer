@@ -88,7 +88,9 @@
         "create_button": "Создать ветку",
         "switch_button": "Переключиться на выбранную",
         "delete_button": "Удалить выбранную",
-        "merge_button": "Слить ветки"
+        "merge_button": "Слить ветки",
+        "path_placeholder": "Путь к папке проекта...",
+        "sync_button": "Из вкладки Деплой"
     },
     "settings_tab": {
         "path_group": "Настройки путей",
@@ -199,7 +201,7 @@
         "token_empty": "Токен не введен",
         "clipboard_empty": "Буфер обмена пуст",
         "token_format_warning": "Подозрительный формат токена. Вставить?",
-        "settings_saved": "✅ Настройки сохранены",
+        "settings_saved": "Настройки сохранены",
         "history_cleared": "🗑️ История коммитов очищена",
         "history_exported": "✅ История экспортирована в {}",
         "export_failed": "❌ Ошибка экспорта: {}",
@@ -235,7 +237,10 @@
         "secret_allow_hint": "Чтобы разрешить push с секретами, перейдите в Настройки репозитория → Безопасность.",
         "secrets_found": "Секреты обнаружены в отслеживаемых файлах. Push заблокирован.",
         "secrets_advice": "Добавьте файл в .gitignore и удалите из индекса (git rm --cached).",
-        "secrets_clean": "Секреты не обнаружены. Можно выполнять push."
+        "secrets_clean": "Секреты не обнаружены. Можно выполнять push.",
+        "gitignore_loaded": ".gitignore загружен",
+        "gitignore_not_found": ".gitignore не найден, показан шаблон по умолчанию",
+        "gitignore_saved": ".gitignore сохранён: {}"
     },
     "status": {
         "ready": "✅ Готов к работе",
@@ -255,7 +260,8 @@
         "deploy_failed": "Деплой не удался",
         "branch_exists": "Ветка уже существует",
         "branch_not_found": "Ветка не найдена",
-        "merge_conflict": "Обнаружен конфликт слияния"
+        "merge_conflict": "Обнаружен конфликт слияния",
+        "save_failed": "Ошибка сохранения"
     },
     "buttons": {
         "ok": "OK",
@@ -391,5 +397,18 @@
         "interval_24h": "Каждый день",
         "no_profiles": "(нет профилей)",
         "no_project_path": "Сначала укажите путь к проекту во вкладке Деплой"
+    },
+    "gitignore_tab": {
+        "project_group": "Проект",
+        "path_placeholder": "Путь к папке проекта...",
+        "browse_tooltip": "Обзор",
+        "load_button": "Загрузить .gitignore",
+        "sync_button": "Из вкладки Деплой",
+        "editor_group": "Редактор .gitignore",
+        "editor_placeholder": "# Добавьте паттерны для игнорирования...",
+        "editor_hint": "Изменения применяются только после нажатия Сохранить.",
+        "actions_group": "Действия",
+        "reset_button": "Сбросить",
+        "save_button": "Сохранить .gitignore"
     }
 }
