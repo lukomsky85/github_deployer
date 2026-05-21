@@ -207,6 +207,6 @@ GitHub требует Personal Access Token вместо пароля для HTT
 
 ## Лицензия
 
-MIT License — используйте свободно, без гарантий.
+MIT License
 
 © 2026 GitHub Deploy Helper
