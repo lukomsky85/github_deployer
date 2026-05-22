@@ -240,7 +240,8 @@
         "secrets_clean": "Секреты не обнаружены. Можно выполнять push.",
         "gitignore_loaded": ".gitignore загружен",
         "gitignore_not_found": ".gitignore не найден, показан шаблон по умолчанию",
-        "gitignore_saved": ".gitignore сохранён: {}"
+        "gitignore_saved": ".gitignore сохранён: {}",
+        "info": "Информация"
     },
     "status": {
         "ready": "✅ Готов к работе",
@@ -339,7 +340,8 @@
         "detail_meta": "Метаданные",
         "detail_parents": "Родители",
         "detail_files": "Изменённые файлы",
-        "copy_sha": "Копировать SHA"
+        "copy_sha": "Копировать SHA",
+        "detail_group": "Детали коммита"
     },
     "automation": {
         "hooks_title": "Хуки деплоя",

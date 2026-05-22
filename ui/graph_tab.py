@@ -199,7 +199,8 @@ class GraphTabMixin:
         # ── Панель управления ────────────────────────────────────────────
         ctrl_group = QGroupBox(lang_mgr.get_text("graph_tab.repo_group"))
         ctrl_lay = QVBoxLayout(ctrl_group)
-        ctrl_lay.setSpacing(6)
+        ctrl_lay.setContentsMargins(12, 8, 12, 8)
+        ctrl_lay.setSpacing(8)
 
         # Путь к репо
         path_row = QHBoxLayout()
@@ -281,21 +282,28 @@ class GraphTabMixin:
 
         # ── Заголовки колонок ────────────────────────────────────────────
         header = QWidget()
-        header.setFixedHeight(24)
-        header.setStyleSheet("background:#e6e9ef; border-radius:4px;")
+        header.setFixedHeight(30)
+        header.setStyleSheet(
+            "QWidget { background:#e6e9ef; border-radius:6px;"
+            " border:1px solid #dce0e8; }"
+        )
         header_lay = QHBoxLayout(header)
-        header_lay.setContentsMargins(8, 0, 8, 0)
+        header_lay.setContentsMargins(12, 0, 12, 0)
+        header_lay.setSpacing(0)
 
-        for text in [
-            lang_mgr.get_text("graph_tab.col_graph"),
-            lang_mgr.get_text("graph_tab.col_message"),
-            lang_mgr.get_text("graph_tab.col_sha"),
-            lang_mgr.get_text("graph_tab.col_author"),
-            lang_mgr.get_text("graph_tab.col_date"),
+        for text, stretch in [
+            (lang_mgr.get_text("graph_tab.col_graph"),   0),
+            (lang_mgr.get_text("graph_tab.col_message"),  2),
+            (lang_mgr.get_text("graph_tab.col_sha"),      1),
+            (lang_mgr.get_text("graph_tab.col_author"),   1),
+            (lang_mgr.get_text("graph_tab.col_date"),     1),
         ]:
             lbl = QLabel(text)
-            lbl.setStyleSheet("font-size: 8.5pt; font-weight: 600; color: #6c6f85;")
-            header_lay.addWidget(lbl, 1 if text != lang_mgr.get_text("graph_tab.col_graph") else 0)
+            lbl.setStyleSheet(
+                "font-size:8.5pt; font-weight:600; color:#6c6f85;"
+                " background:transparent; border:none; padding:0 8px;"
+            )
+            header_lay.addWidget(lbl, stretch)
 
         root.addWidget(header)
 
@@ -311,7 +319,9 @@ class GraphTabMixin:
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        scroll.setStyleSheet("QScrollArea { background: #ffffff; border: 1px solid #dce0e8; border-radius: 8px; }")
+        scroll.setStyleSheet(
+            "QScrollArea { background:#ffffff; border:1px solid #dce0e8; border-radius:8px; }"
+        )
 
         self._graph_widget = CommitGraphWidget()
         self._graph_widget.commit_selected.connect(self._on_commit_selected)
@@ -320,19 +330,23 @@ class GraphTabMixin:
         splitter.addWidget(graph_container)
 
         # Панель деталей
+        detail_group = QGroupBox(lang_mgr.get_text("graph_tab.detail_group"))
+        dg_lay = QVBoxLayout(detail_group)
+        dg_lay.setContentsMargins(0, 0, 0, 0)
+        dg_lay.setSpacing(0)
+
         detail_scroll = QScrollArea()
         detail_scroll.setWidgetResizable(True)
         detail_scroll.setFrameShape(QFrame.NoFrame)
         detail_scroll.setMinimumWidth(300)
-        detail_scroll.setMaximumWidth(420)
-        detail_scroll.setStyleSheet(
-            "QScrollArea { background:#ffffff; border:1px solid #dce0e8; border-radius:8px; }"
-        )
+        detail_scroll.setMaximumWidth(440)
+        detail_scroll.setStyleSheet("QScrollArea { background:transparent; border:none; }")
 
         self._detail_panel = CommitDetailPanel()
-        self._detail_panel.setContentsMargins(12, 12, 12, 12)
+        self._detail_panel.setContentsMargins(12, 4, 12, 12)
         detail_scroll.setWidget(self._detail_panel)
-        splitter.addWidget(detail_scroll)
+        dg_lay.addWidget(detail_scroll)
+        splitter.addWidget(detail_group)
 
         splitter.setSizes([700, 360])
         root.addWidget(splitter, 1)

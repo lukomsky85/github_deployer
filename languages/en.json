@@ -240,7 +240,8 @@
         "secrets_clean": "No secrets detected. Safe to push.",
         "gitignore_loaded": ".gitignore loaded",
         "gitignore_not_found": ".gitignore not found, showing default template",
-        "gitignore_saved": ".gitignore saved: {}"
+        "gitignore_saved": ".gitignore saved: {}",
+        "info": "Information"
     },
     "status": {
         "ready": "✅ Ready",
@@ -339,7 +340,8 @@
         "detail_meta": "Metadata",
         "detail_parents": "Parents",
         "detail_files": "Changed files",
-        "copy_sha": "Copy SHA"
+        "copy_sha": "Copy SHA",
+        "detail_group": "Commit Details"
     },
     "automation": {
         "hooks_title": "Deploy Hooks",
